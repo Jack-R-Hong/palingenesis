@@ -1,6 +1,6 @@
 # Story 1.1: Project Initialization from Starter Template
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,36 +24,36 @@ So that I have a solid foundation with CI/CD, proper structure, and best practic
 
 ## Tasks / Subtasks
 
-- [ ] Initialize project from starter template (AC: 1)
-  - [ ] Run `cargo generate` with template URL
-  - [ ] Verify directory structure created
-  - [ ] Verify CI/CD workflows present
-- [ ] Customize Cargo.toml with project dependencies (AC: 2)
-  - [ ] Update package metadata (name, description, license)
-  - [ ] Add tokio 1.49 with full features
-  - [ ] Add axum 0.8.8 for HTTP server
-  - [ ] Add clap 4.5.50 with derive features
-  - [ ] Add serde 1.0.228 with derive features
-  - [ ] Add notify 8.2.0 for file watching
-  - [ ] Add reqwest 0.13.1 for HTTP client
-  - [ ] Add tracing 0.1.44 and tracing-subscriber 0.3.22
-  - [ ] Add thiserror 2.0.17 and anyhow 1.0.100
-  - [ ] Add platform-specific dependencies (nix, systemd)
-- [ ] Create module directory structure (AC: 2)
-  - [ ] Create `src/cli/` directory
-  - [ ] Create `src/daemon/` directory
-  - [ ] Create `src/monitor/` directory
-  - [ ] Create `src/resume/` directory
-  - [ ] Create `src/http/` directory
-  - [ ] Create `src/ipc/` directory
-  - [ ] Create `src/notify/` directory
-  - [ ] Create `src/config/` directory
-  - [ ] Create `src/state/` directory
-  - [ ] Create `src/telemetry/` directory
-- [ ] Verify build succeeds (AC: 2)
-  - [ ] Run `cargo build`
-  - [ ] Confirm binary created at `target/debug/palingenesis`
-  - [ ] Run `cargo test` to verify test infrastructure
+- [x] Initialize project from starter template (AC: 1)
+  - [x] Run `cargo generate` with template URL
+  - [x] Verify directory structure created
+  - [x] Verify CI/CD workflows present
+- [x] Customize Cargo.toml with project dependencies (AC: 2)
+  - [x] Update package metadata (name, description, license)
+  - [x] Add tokio 1.49 with full features
+  - [x] Add axum 0.8.8 for HTTP server
+  - [x] Add clap 4.5.50 with derive features
+  - [x] Add serde 1.0.228 with derive features
+  - [x] Add notify 8.2.0 for file watching
+  - [x] Add reqwest 0.13.1 for HTTP client
+  - [x] Add tracing 0.1.44 and tracing-subscriber 0.3.22
+  - [x] Add thiserror 2.0.17 and anyhow 1.0.100
+  - [x] Add platform-specific dependencies (nix, systemd)
+- [x] Create module directory structure (AC: 2)
+  - [x] Create `src/cli/` directory
+  - [x] Create `src/daemon/` directory
+  - [x] Create `src/monitor/` directory
+  - [x] Create `src/resume/` directory
+  - [x] Create `src/http/` directory
+  - [x] Create `src/ipc/` directory
+  - [x] Create `src/notify/` directory
+  - [x] Create `src/config/` directory
+  - [x] Create `src/state/` directory
+  - [x] Create `src/telemetry/` directory
+- [x] Verify build succeeds (AC: 2)
+  - [x] Run `cargo build`
+  - [x] Confirm binary created at `target/debug/palingenesis`
+  - [x] Run `cargo test` to verify test infrastructure
 
 ## Dev Notes
 
@@ -260,16 +260,65 @@ tests/
 
 ### Agent Model Used
 
-_To be filled by dev agent_
+Claude claude-opus-4-5 (anthropic/claude-opus-4-5) via Amelia Developer Agent
 
 ### Debug Log References
 
-_To be filled by dev agent_
+N/A - Clean implementation with no blocking issues.
 
 ### Completion Notes List
 
-_To be filled by dev agent_
+1. **Template Initialization**: Used `cargo generate --init` with `--define author="Jack"` to generate template directly into existing repo (which already contained BMAD artifacts)
+2. **Rust Edition**: Template uses Rust 2024 edition (requires rust-version 1.85+), updated from story spec's 1.75/2021
+3. **Reqwest Feature**: Changed `rustls-tls` to `rustls` for reqwest 0.13.1 compatibility
+4. **Systemd Optional**: Made systemd dependency optional due to missing libsystemd-dev on build system. Enable with `--features systemd` on Linux systems with libsystemd-dev installed
+5. **All 10 modules created**: cli, daemon, monitor, resume, http, ipc, notify, config, state, telemetry - each with mod.rs placeholder
+6. **Test infrastructure verified**: `cargo test` passes with 1 test (lib.rs::tests::it_works)
+7. **Binary size**: 12.8MB debug build (release build will be smaller, target is <10MB)
 
 ### File List
 
-_To be filled by dev agent_
+**New Files (from template):**
+- `.github/workflows/audit.yaml`
+- `.github/workflows/benchmark.yaml`
+- `.github/workflows/ci.yaml`
+- `.github/workflows/dependabot-auto-merge.yaml`
+- `.github/workflows/release.yaml`
+- `.gitignore`
+- `.octocov.yml`
+- `benches/bench.rs`
+- `Cargo.lock`
+- `Cargo.toml`
+- `CLAUDE.md`
+- `README.md`
+- `rust-toolchain.toml`
+- `src/main.rs`
+- `src/lib.rs`
+
+**New Files (module structure):**
+- `src/cli/mod.rs`
+- `src/config/mod.rs`
+- `src/daemon/mod.rs`
+- `src/http/mod.rs`
+- `src/ipc/mod.rs`
+- `src/monitor/mod.rs`
+- `src/notify/mod.rs`
+- `src/resume/mod.rs`
+- `src/state/mod.rs`
+- `src/telemetry/mod.rs`
+
+**New Directories:**
+- `config/`
+- `launchd/`
+- `systemd/`
+- `tests/fixtures/`
+- `tests/integration/`
+
+**Modified Files:**
+- None (all new)
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-02-05 | Initial implementation: project initialized from skanehira/rust-cli-template, all dependencies added, module structure created, build verified |
