@@ -12,8 +12,11 @@ cargo build
 # Release build
 cargo build --release
 
-# Run (example)
-cargo run -- --name "World"
+# Run (shows help)
+cargo run -- --help
+
+# Run daemon in foreground
+cargo run -- daemon start --foreground
 ```
 
 ### Testing
@@ -66,6 +69,6 @@ cargo +nightly bench
 - **release.yaml**: Automated release on tag push (cross-platform builds via GoReleaser)
 
 ### Key Settings
-- **Rust version**: Fixed to 1.87 in `rust-toolchain.toml`
+- **Rust version**: Fixed to 1.85 in `rust-toolchain.toml`
 - **Edition**: Uses Rust 2024 edition
 - **Test tools**: cargo-nextest and cargo-llvm-cov recommended

@@ -8,11 +8,3 @@ pub mod notify;
 pub mod resume;
 pub mod state;
 pub mod telemetry;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
