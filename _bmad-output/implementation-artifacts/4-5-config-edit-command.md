@@ -1,6 +1,6 @@
 # Story 4.5: Config Edit Command
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -44,43 +44,43 @@ So that I can make changes easily.
 
 ## Tasks / Subtasks
 
-- [ ] Add config edit subcommand to CLI (AC: 1, 5, 6)
-  - [ ] Add `edit` subcommand to `ConfigCmd` enum
-  - [ ] Add `--path` option for custom config path
-  - [ ] Add `--no-validate` flag to skip validation
+- [x] Add config edit subcommand to CLI (AC: 1, 5, 6)
+  - [x] Add `edit` subcommand to `ConfigCmd` enum
+  - [x] Add `--path` option for custom config path
+  - [x] Add `--no-validate` flag to skip validation
 
-- [ ] Implement editor detection (AC: 1, 2)
-  - [ ] Check `$EDITOR` environment variable
-  - [ ] Check `$VISUAL` environment variable
-  - [ ] Fall back to `vi` on Unix
-  - [ ] Fall back to `nano` if `vi` not found
-  - [ ] Fall back to `notepad` on Windows
-  - [ ] Return error if no editor found
+- [x] Implement editor detection (AC: 1, 2)
+  - [x] Check `$EDITOR` environment variable
+  - [x] Check `$VISUAL` environment variable
+  - [x] Fall back to `vi` on Unix
+  - [x] Fall back to `nano` if `vi` not found
+  - [x] Fall back to `notepad` on Windows
+  - [x] Return error if no editor found
 
-- [ ] Implement create-before-edit (AC: 3)
-  - [ ] Check if config file exists
-  - [ ] If not, call config init logic
-  - [ ] Then proceed to open editor
+- [x] Implement create-before-edit (AC: 3)
+  - [x] Check if config file exists
+  - [x] If not, call config init logic
+  - [x] Then proceed to open editor
 
-- [ ] Implement editor invocation (AC: 1)
-  - [ ] Spawn editor process with config file path
-  - [ ] Wait for editor to exit
-  - [ ] Handle editor errors
+- [x] Implement editor invocation (AC: 1)
+  - [x] Spawn editor process with config file path
+  - [x] Wait for editor to exit
+  - [x] Handle editor errors
 
-- [ ] Implement post-edit validation (AC: 4)
-  - [ ] After editor exits, call validate logic
-  - [ ] Display validation result
-  - [ ] Don't exit with error (just inform)
+- [x] Implement post-edit validation (AC: 4)
+  - [x] After editor exits, call validate logic
+  - [x] Display validation result
+  - [x] Don't exit with error (just inform)
 
-- [ ] Handle skip validation flag (AC: 6)
-  - [ ] Skip validation when --no-validate is set
-  - [ ] Print message that validation was skipped
+- [x] Handle skip validation flag (AC: 6)
+  - [x] Skip validation when --no-validate is set
+  - [x] Print message that validation was skipped
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test editor detection
-  - [ ] Test editor fallback chain
-  - [ ] Test create before edit
-  - [ ] Test post-edit validation
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test editor detection
+  - [x] Test editor fallback chain
+  - [x] Test create before edit
+  - [x] Test post-edit validation
 
 ## Dev Notes
 
@@ -246,8 +246,10 @@ Editor testing is tricky in CI environments. Consider:
 **Files to modify:**
 - `src/cli/app.rs`
 - `src/cli/commands/config.rs`
-- `_bmad-output/sprint-status.yaml`
+- `src/main.rs`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented config edit command, editor selection, and tests

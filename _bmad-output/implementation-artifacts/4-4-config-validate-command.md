@@ -1,6 +1,6 @@
 # Story 4.4: Config Validate Command
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -46,50 +46,50 @@ So that I catch errors before starting the daemon.
 
 ## Tasks / Subtasks
 
-- [ ] Add config validate subcommand to CLI (AC: 1, 5)
-  - [ ] Add `validate` subcommand to `ConfigCmd` enum
-  - [ ] Add `--path` option for custom config path
+- [x] Add config validate subcommand to CLI (AC: 1, 5)
+  - [x] Add `validate` subcommand to `ConfigCmd` enum
+  - [x] Add `--path` option for custom config path
 
-- [ ] Implement syntax validation (AC: 2)
-  - [ ] Attempt to parse config as TOML
-  - [ ] Catch parse errors
-  - [ ] Extract line/column from error
-  - [ ] Format helpful error message
+- [x] Implement syntax validation (AC: 2)
+  - [x] Attempt to parse config as TOML
+  - [x] Catch parse errors
+  - [x] Extract line/column from error
+  - [x] Format helpful error message
 
-- [ ] Implement schema validation (AC: 3)
-  - [ ] Attempt to deserialize into Config struct
-  - [ ] Catch type mismatch errors
-  - [ ] Format field-specific error messages
+- [x] Implement schema validation (AC: 3)
+  - [x] Attempt to deserialize into Config struct
+  - [x] Catch type mismatch errors
+  - [x] Format field-specific error messages
 
-- [ ] Implement semantic validation (AC: 6)
-  - [ ] Create `validate_config()` function in `src/config/validation.rs`
-  - [ ] Validate port ranges (0-65535)
-  - [ ] Validate paths exist or can be created
-  - [ ] Validate log levels are valid
-  - [ ] Validate URL formats
-  - [ ] Validate duration values are positive
+- [x] Implement semantic validation (AC: 6)
+  - [x] Create `validate_config()` function in `src/config/validation.rs`
+  - [x] Validate port ranges (0-65535)
+  - [x] Validate paths exist or can be created
+  - [x] Validate log levels are valid
+  - [x] Validate URL formats
+  - [x] Validate duration values are positive
 
-- [ ] Handle missing config (AC: 4)
-  - [ ] Check if config file exists
-  - [ ] Print appropriate message
-  - [ ] Exit with code 0
+- [x] Handle missing config (AC: 4)
+  - [x] Check if config file exists
+  - [x] Print appropriate message
+  - [x] Exit with code 0
 
-- [ ] Implement result formatting (AC: 1, 2, 3)
-  - [ ] Green "Configuration valid" on success
-  - [ ] Red error messages on failure
-  - [ ] Include suggestions for fixing errors
+- [x] Implement result formatting (AC: 1, 2, 3)
+  - [x] Green "Configuration valid" on success
+  - [x] Red error messages on failure
+  - [x] Include suggestions for fixing errors
 
-- [ ] Add exit codes (AC: 1, 2, 3, 4)
-  - [ ] Exit 0 on valid/no config
-  - [ ] Exit 1 on invalid config
+- [x] Add exit codes (AC: 1, 2, 3, 4)
+  - [x] Exit 0 on valid/no config
+  - [x] Exit 1 on invalid config
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test valid config
-  - [ ] Test syntax error
-  - [ ] Test type mismatch
-  - [ ] Test semantic errors
-  - [ ] Test no config file
-  - [ ] Test custom path
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test valid config
+  - [x] Test syntax error
+  - [x] Test type mismatch
+  - [x] Test semantic errors
+  - [x] Test no config file
+  - [x] Test custom path
 
 ## Dev Notes
 
@@ -333,8 +333,10 @@ Uses existing dependencies:
 - `src/config/mod.rs`
 - `src/cli/app.rs`
 - `src/cli/commands/config.rs`
-- `_bmad-output/sprint-status.yaml`
+- `src/main.rs`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented config validation command, semantic checks, and tests

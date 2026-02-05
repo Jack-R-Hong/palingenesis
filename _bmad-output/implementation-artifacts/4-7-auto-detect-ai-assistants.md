@@ -1,6 +1,6 @@
 # Story 4.7: Auto-Detect AI Assistants
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -42,54 +42,54 @@ So that I don't need to configure them manually.
 
 ## Tasks / Subtasks
 
-- [ ] Create detection module (AC: 1, 5)
-  - [ ] Create `src/monitor/detection.rs`
-  - [ ] Define `Assistant` struct with name, session_dir, process_pattern
-  - [ ] Define `DetectionResult` struct
+- [x] Create detection module (AC: 1, 5)
+  - [x] Create `src/monitor/detection.rs`
+  - [x] Define `Assistant` struct with name, session_dir, process_pattern
+  - [x] Define `DetectionResult` struct
 
-- [ ] Implement opencode detection (AC: 2, 5)
-  - [ ] Check for `~/.opencode` directory
-  - [ ] Check for opencode process in process list
-  - [ ] Check for opencode session files pattern
+- [x] Implement opencode detection (AC: 2, 5)
+  - [x] Check for `~/.opencode` directory
+  - [x] Check for opencode process in process list
+  - [x] Check for opencode session files pattern
 
-- [ ] Implement process-based detection (AC: 5)
-  - [ ] Scan `/proc` on Linux for process names
-  - [ ] Use `sysctl` or `ps` on macOS
-  - [ ] Match against known assistant process names
+- [x] Implement process-based detection (AC: 5)
+  - [x] Scan `/proc` on Linux for process names
+  - [x] Use `sysctl` or `ps` on macOS
+  - [x] Match against known assistant process names
 
-- [ ] Implement directory-based detection (AC: 5)
-  - [ ] Check for known assistant config directories
-  - [ ] opencode: `~/.opencode`
-  - [ ] claude-code: `~/.claude` (future)
-  - [ ] cursor: `~/.cursor` (future)
+- [x] Implement directory-based detection (AC: 5)
+  - [x] Check for known assistant config directories
+  - [x] opencode: `~/.opencode`
+  - [x] claude-code: `~/.claude` (future)
+  - [x] cursor: `~/.cursor` (future)
 
-- [ ] Implement file pattern detection (AC: 5)
-  - [ ] Look for session file patterns
-  - [ ] Look for lock files indicating active sessions
-  - [ ] Look for IPC sockets
+- [x] Implement file pattern detection (AC: 5)
+  - [x] Look for session file patterns
+  - [x] Look for lock files indicating active sessions
+  - [x] Look for IPC sockets
 
-- [ ] Integrate detection into daemon startup (AC: 1, 4)
-  - [ ] Check if monitoring.assistants is empty
-  - [ ] If empty and auto_detect is true, run detection
-  - [ ] If explicit list, skip detection
+- [x] Integrate detection into daemon startup (AC: 1, 4)
+  - [x] Check if monitoring.assistants is empty
+  - [x] If empty and auto_detect is true, run detection
+  - [x] If explicit list, skip detection
 
-- [ ] Add logging (AC: 3)
-  - [ ] Log detected assistants
-  - [ ] Log detection method used
-  - [ ] Log if no assistants found
+- [x] Add logging (AC: 3)
+  - [x] Log detected assistants
+  - [x] Log detection method used
+  - [x] Log if no assistants found
 
-- [ ] Implement periodic re-detection (AC: 6)
-  - [ ] Add detection interval to config
-  - [ ] Spawn background task for periodic detection
-  - [ ] Add newly detected assistants to monitoring
-  - [ ] Handle assistant removal gracefully
+- [x] Implement periodic re-detection (AC: 6)
+  - [x] Add detection interval to config
+  - [x] Spawn background task for periodic detection
+  - [x] Add newly detected assistants to monitoring
+  - [x] Handle assistant removal gracefully
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test opencode detection with directory
-  - [ ] Test opencode detection with process
-  - [ ] Test explicit config skips detection
-  - [ ] Test logging output
-  - [ ] Test periodic re-detection
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test opencode detection with directory
+  - [x] Test opencode detection with process
+  - [x] Test explicit config skips detection
+  - [x] Test logging output
+  - [x] Test periodic re-detection
 
 ## Dev Notes
 
@@ -397,13 +397,19 @@ Uses existing dependencies:
 
 **Files to create:**
 - `src/monitor/detection.rs`
-- `tests/assistant_detection_test.rs`
+
 
 **Files to modify:**
 - `src/monitor/mod.rs`
 - `src/daemon/core.rs`
-- `_bmad-output/sprint-status.yaml`
+- `src/daemon/state.rs`
+- `src/config/schema.rs`
+- `src/config/validation.rs`
+- `src/cli/commands/config.rs`
+- `tests/config_schema_test.rs`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented assistant auto-detection, periodic refresh, and tests

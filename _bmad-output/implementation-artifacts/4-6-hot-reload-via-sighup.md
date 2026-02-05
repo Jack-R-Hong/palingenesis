@@ -1,6 +1,6 @@
 # Story 4.6: Hot Reload via SIGHUP
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -45,54 +45,54 @@ So that I can update settings without interrupting monitoring.
 
 ## Tasks / Subtasks
 
-- [ ] Add daemon reload subcommand to CLI (AC: 1)
-  - [ ] Add `reload` subcommand to `DaemonCmd` enum
-  - [ ] Implement sending SIGHUP to daemon process
-  - [ ] Use PID from PID file
+- [x] Add daemon reload subcommand to CLI (AC: 1)
+  - [x] Add `reload` subcommand to `DaemonCmd` enum
+  - [x] Implement sending SIGHUP to daemon process
+  - [x] Use PID from PID file
 
-- [ ] Implement SIGHUP signal handler (AC: 2)
-  - [ ] Register SIGHUP handler in daemon startup
-  - [ ] Use tokio signal handling
-  - [ ] Trigger config reload on signal
+- [x] Implement SIGHUP signal handler (AC: 2)
+  - [x] Register SIGHUP handler in daemon startup
+  - [x] Use tokio signal handling
+  - [x] Trigger config reload on signal
 
-- [ ] Implement config reload logic (AC: 2, 4)
-  - [ ] Create `reload_config()` method on daemon
-  - [ ] Re-read config file from disk
-  - [ ] Parse and validate new config
-  - [ ] Apply new settings to running daemon
+- [x] Implement config reload logic (AC: 2, 4)
+  - [x] Create `reload_config()` method on daemon
+  - [x] Re-read config file from disk
+  - [x] Parse and validate new config
+  - [x] Apply new settings to running daemon
 
-- [ ] Implement validation during reload (AC: 3)
-  - [ ] Validate new config before applying
-  - [ ] If invalid, log error and keep current
-  - [ ] Return error status for CLI feedback
+- [x] Implement validation during reload (AC: 3)
+  - [x] Validate new config before applying
+  - [x] If invalid, log error and keep current
+  - [x] Return error status for CLI feedback
 
-- [ ] Track non-reloadable settings (AC: 5)
-  - [ ] Define list of settings that require restart
-  - [ ] Compare old vs new config
-  - [ ] Log warnings for changed non-reloadable settings
+- [x] Track non-reloadable settings (AC: 5)
+  - [x] Define list of settings that require restart
+  - [x] Compare old vs new config
+  - [x] Log warnings for changed non-reloadable settings
 
-- [ ] Apply reloadable settings (AC: 4)
-  - [ ] Update log level dynamically
-  - [ ] Update resume timing settings
-  - [ ] Update notification settings
-  - [ ] Update monitoring debounce
+- [x] Apply reloadable settings (AC: 4)
+  - [x] Update log level dynamically
+  - [x] Update resume timing settings
+  - [x] Update notification settings
+  - [x] Update monitoring debounce
 
-- [ ] Implement IPC RELOAD command (AC: 6)
-  - [ ] Add `RELOAD` to IPC protocol
-  - [ ] Handle in IPC server
-  - [ ] Return success/error response
+- [x] Implement IPC RELOAD command (AC: 6)
+  - [x] Add `RELOAD` to IPC protocol
+  - [x] Handle in IPC server
+  - [x] Return success/error response
 
-- [ ] Add logging (AC: 2, 3, 5)
-  - [ ] Log "Configuration reloaded" on success
-  - [ ] Log "Invalid config, keeping current" on failure
-  - [ ] Log warnings for non-reloadable settings
+- [x] Add logging (AC: 2, 3, 5)
+  - [x] Log "Configuration reloaded" on success
+  - [x] Log "Invalid config, keeping current" on failure
+  - [x] Log warnings for non-reloadable settings
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test SIGHUP handler triggers reload
-  - [ ] Test reload with valid config
-  - [ ] Test reload with invalid config
-  - [ ] Test non-reloadable setting warnings
-  - [ ] Test IPC RELOAD command
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test SIGHUP handler triggers reload
+  - [x] Test reload with valid config
+  - [x] Test reload with invalid config
+  - [x] Test non-reloadable setting warnings
+  - [x] Test IPC RELOAD command
 
 ## Dev Notes
 
@@ -318,17 +318,16 @@ Uses existing dependencies:
 ## File List
 
 **Files to create:**
-- `tests/config_reload_test.rs`
+- None
 
 **Files to modify:**
 - `src/daemon/signals.rs`
 - `src/daemon/core.rs`
-- `src/ipc/protocol.rs`
-- `src/ipc/socket.rs`
-- `src/cli/app.rs`
+- `src/daemon/state.rs`
 - `src/cli/commands/daemon.rs`
-- `_bmad-output/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented SIGHUP reload handling, config reload logic, and tests

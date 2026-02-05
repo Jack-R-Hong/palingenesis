@@ -66,14 +66,14 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: Configuration Management
-  epic-4: in-progress
+  epic-4: done
   4-1-config-schema-definition: done
   4-2-config-init-command: done
   4-3-config-show-command: done
-  4-4-config-validate-command: ready-for-dev
-  4-5-config-edit-command: ready-for-dev
-  4-6-hot-reload-via-sighup: ready-for-dev
-  4-7-auto-detect-ai-assistants: ready-for-dev
+  4-4-config-validate-command: done
+  4-5-config-edit-command: done
+  4-6-hot-reload-via-sighup: done
+  4-7-auto-detect-ai-assistants: done
   epic-4-retrospective: optional
 
   # Epic 5: Event Notifications
