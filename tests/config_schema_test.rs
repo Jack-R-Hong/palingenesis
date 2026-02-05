@@ -64,6 +64,7 @@ service_name = "palingenesis-test"
 protocol = "grpc"
 sampling_ratio = 0.25
 traces = false
+logs = true
 metrics = true
 "#;
 
@@ -129,7 +130,7 @@ metrics = true
             protocol: "grpc".to_string(),
             sampling_ratio: 0.25,
             traces: false,
-            logs: false,
+            logs: true,
             metrics: true,
             metrics_enabled: true,
         }

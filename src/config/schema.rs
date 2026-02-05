@@ -406,6 +406,7 @@ mod tests {
         assert_eq!(otel.endpoint, "http://localhost:4317");
         assert_eq!(otel.protocol, "http");
         assert_eq!(otel.sampling_ratio, 1.0);
+        assert!(!otel.logs);
     }
 
     #[test]
