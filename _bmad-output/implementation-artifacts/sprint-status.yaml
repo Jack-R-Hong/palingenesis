@@ -92,7 +92,7 @@ development_status:
   6-2-health-endpoint: done
   6-3-status-api-endpoint: done
   6-4-control-api-endpoints: done
-  6-5-events-sse-stream: ready-for-dev
+  6-5-events-sse-stream: review
   6-6-discord-slack-bot-commands: backlog
   epic-6-retrospective: optional
 
