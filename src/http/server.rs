@@ -103,6 +103,10 @@ impl HttpServer {
     fn create_router(state: Arc<DaemonState>) -> Router {
         Router::new()
             .route("/health", axum::routing::get(handlers::health::health_handler))
+            .route(
+                "/api/v1/status",
+                axum::routing::get(handlers::status::status_handler),
+            )
             .fallback(Self::fallback_handler)
             .with_state(state)
             .layer(

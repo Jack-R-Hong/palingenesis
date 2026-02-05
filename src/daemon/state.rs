@@ -51,6 +51,13 @@ impl DaemonState {
             Err(_) => None,
         }
     }
+
+    pub fn monitoring_config(&self) -> Option<crate::config::schema::MonitoringConfig> {
+        match self.config.read() {
+            Ok(guard) => Some(guard.monitoring.clone()),
+            Err(_) => None,
+        }
+    }
 }
 
 impl Default for DaemonState {
