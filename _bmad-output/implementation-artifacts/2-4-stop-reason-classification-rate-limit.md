@@ -1,6 +1,6 @@
 # Story 2.4: Stop Reason Classification - Rate Limit
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -45,66 +45,66 @@ So that the daemon knows to wait and resume the same session.
 
 ## Tasks / Subtasks
 
-- [ ] Create classifier module structure (AC: 1, 2, 5, 6)
-  - [ ] Create `src/monitor/classifier.rs` with StopReasonClassifier
-  - [ ] Define `StopReason` enum with all variants
-  - [ ] Define `ClassificationResult` struct with metadata
-  - [ ] Update `src/monitor/mod.rs` to export modules
+- [x] Create classifier module structure (AC: 1, 2, 5, 6)
+  - [x] Create `src/monitor/classifier.rs` with StopReasonClassifier
+  - [x] Define `StopReason` enum with all variants
+  - [x] Define `ClassificationResult` struct with metadata
+  - [x] Update `src/monitor/mod.rs` to export modules
 
-- [ ] Define StopReason types (AC: 1, 2, 3, 4)
-  - [ ] Define `StopReason` enum (RateLimit, ContextExhausted, UserExit, Completed, Unknown)
-  - [ ] Define `RateLimitInfo` struct (retry_after, source)
-  - [ ] Define `ClassifierError` enum with thiserror
-  - [ ] Implement Display for user-friendly messages
+- [x] Define StopReason types (AC: 1, 2, 3, 4)
+  - [x] Define `StopReason` enum (RateLimit, ContextExhausted, UserExit, Completed, Unknown)
+  - [x] Define `RateLimitInfo` struct (retry_after, source)
+  - [x] Define `ClassifierError` enum with thiserror
+  - [x] Implement Display for user-friendly messages
 
-- [ ] Implement rate limit detection patterns (AC: 1, 2)
-  - [ ] Pattern: "rate_limit_error" in session/log content
-  - [ ] Pattern: "429" HTTP status code
-  - [ ] Pattern: "too many requests" error message
-  - [ ] Pattern: "quota exceeded" variants
-  - [ ] Pattern: Anthropic-specific rate limit indicators
+- [x] Implement rate limit detection patterns (AC: 1, 2)
+  - [x] Pattern: "rate_limit_error" in session/log content
+  - [x] Pattern: "429" HTTP status code
+  - [x] Pattern: "too many requests" error message
+  - [x] Pattern: "quota exceeded" variants
+  - [x] Pattern: Anthropic-specific rate limit indicators
 
-- [ ] Implement Retry-After extraction (AC: 3, 4)
-  - [ ] Parse `Retry-After` header value (seconds)
-  - [ ] Parse `retry_after` JSON field
-  - [ ] Parse "try again in X seconds" text patterns
-  - [ ] Fall back to default wait time from config
+- [x] Implement Retry-After extraction (AC: 3, 4)
+  - [x] Parse `Retry-After` header value (seconds)
+  - [x] Parse `retry_after` JSON field
+  - [x] Parse "try again in X seconds" text patterns
+  - [x] Fall back to default wait time from config
 
-- [ ] Implement StopReasonClassifier struct (AC: 1, 2, 5)
-  - [ ] Accept session path and optional log content
-  - [ ] Implement `classify()` method returning ClassificationResult
-  - [ ] Implement pattern priority (rate limit > context > user exit)
-  - [ ] Support multiple input sources (file, log, exit code)
+- [x] Implement StopReasonClassifier struct (AC: 1, 2, 5)
+  - [x] Accept session path and optional log content
+  - [x] Implement `classify()` method returning ClassificationResult
+  - [x] Implement pattern priority (rate limit > context > user exit)
+  - [x] Support multiple input sources (file, log, exit code)
 
-- [ ] Implement classification logic (AC: 1, 2, 3, 5)
-  - [ ] Read session file last N lines for error detection
-  - [ ] Parse structured error messages (JSON/YAML)
-  - [ ] Extract HTTP status codes from logs
-  - [ ] Combine multiple signals for confidence scoring
+- [x] Implement classification logic (AC: 1, 2, 3, 5)
+  - [x] Read session file last N lines for error detection
+  - [x] Parse structured error messages (JSON/YAML)
+  - [x] Extract HTTP status codes from logs
+  - [x] Combine multiple signals for confidence scoring
 
-- [ ] Implement error handling (AC: 6)
-  - [ ] Handle file read errors gracefully
-  - [ ] Handle malformed content gracefully
-  - [ ] Return Unknown on classification failure
-  - [ ] Log classification decisions for debugging
+- [x] Implement error handling (AC: 6)
+  - [x] Handle file read errors gracefully
+  - [x] Handle malformed content gracefully
+  - [x] Return Unknown on classification failure
+  - [x] Log classification decisions for debugging
 
-- [ ] Add configuration support (AC: 4)
-  - [ ] Define `ClassifierConfig` with default_retry_wait
-  - [ ] Support config override for wait times
-  - [ ] Support custom patterns (future extensibility)
+- [x] Add configuration support (AC: 4)
+  - [x] Define `ClassifierConfig` with default_retry_wait
+  - [x] Support config override for wait times
+  - [x] Support custom patterns (future extensibility)
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test rate_limit_error detection
-  - [ ] Test HTTP 429 detection
-  - [ ] Test Retry-After extraction (seconds, text)
-  - [ ] Test default wait time fallback
-  - [ ] Test classification priority
-  - [ ] Test error handling
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test rate_limit_error detection
+  - [x] Test HTTP 429 detection
+  - [x] Test Retry-After extraction (seconds, text)
+  - [x] Test default wait time fallback
+  - [x] Test classification priority
+  - [x] Test error handling
 
-- [ ] Add integration tests
-  - [ ] Test with fixture files containing rate limit errors
-  - [ ] Test with real opencode log format samples
-  - [ ] Test end-to-end classification pipeline
+- [x] Add integration tests
+  - [x] Test with fixture files containing rate limit errors
+  - [x] Test with real opencode log format samples
+  - [x] Test end-to-end classification pipeline
 
 ## Dev Notes
 
@@ -459,6 +459,24 @@ When multiple indicators are present:
 - [Source: _bmad-output/implementation-artifacts/2-2-session-file-parser-frontmatter-extraction.md]
 - [Source: _bmad-output/implementation-artifacts/2-3-process-detection-opencode-start-stop.md]
 
+## Dev Agent Record
+
+### Implementation Plan
+
+- Implement rate limit classifier types and detection logic with retry-after extraction.
+- Integrate StopReason into monitor events and export classifier module.
+- Add fixtures and tests for rate limit patterns and default wait handling.
+
+### Debug Log
+
+- 2026-02-05: Implemented classifier module and fixtures; all tests passing.
+
+### Completion Notes
+
+- Added StopReason classifier with rate limit patterns, retry-after extraction, config defaults, and error handling.
+- Wired StopReason into monitor events and exported classifier module for monitor integration.
+- Added fixtures and unit tests covering rate limit patterns and default retry wait (cargo test).
+
 ## File List
 
 **Files to create:**
@@ -467,12 +485,16 @@ When multiple indicators are present:
 - `tests/fixtures/rate_limit_429.txt`
 - `tests/fixtures/rate_limit_anthropic.json`
 - `tests/fixtures/rate_limit_retry_after.txt`
+- `tests/fixtures/rate_limit_opencode.log`
 
 **Files to modify:**
-- `Cargo.toml` (add regex)
-- `src/monitor/mod.rs` (export classifier module)
+- `Cargo.toml`
+- `_bmad-output/implementation-artifacts/2-4-stop-reason-classification-rate-limit.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `src/monitor/events.rs`
+- `src/monitor/mod.rs`
 
 ## Change Log
 
+- 2026-02-05: Implemented rate limit classifier, tests, and monitor event integration.
 - 2026-02-05: Story created and marked ready-for-dev
