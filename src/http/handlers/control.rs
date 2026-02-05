@@ -1,13 +1,15 @@
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::daemon::state::DaemonState;
 use crate::http::server::AppState;
 use crate::ipc::socket::DaemonStateAccess;
+#[cfg(test)]
+use crate::telemetry::Metrics;
 
 /// Error messages returned by DaemonState methods.
 /// Using constants prevents silent failures from string comparison mismatches.
@@ -150,9 +152,7 @@ pub fn new_session_daemon(daemon_state: &DaemonState) -> Result<String, ControlE
 }
 
 /// Handles POST /api/v1/pause requests to pause daemon monitoring.
-pub async fn pause_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn pause_handler(State(state): State<AppState>) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
     match pause_daemon(daemon_state) {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
@@ -161,9 +161,7 @@ pub async fn pause_handler(
 }
 
 /// Handles POST /api/v1/resume requests to resume daemon monitoring.
-pub async fn resume_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn resume_handler(State(state): State<AppState>) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
     match resume_daemon(daemon_state) {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
@@ -172,9 +170,7 @@ pub async fn resume_handler(
 }
 
 /// Handles POST /api/v1/new-session requests to start a new session.
-pub async fn new_session_handler(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn new_session_handler(State(state): State<AppState>) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
     match new_session_daemon(daemon_state) {
         Ok(session_id) => {
@@ -190,9 +186,9 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
+    use axum::Router;
     use axum::body::to_bytes;
     use axum::routing::post;
-    use axum::Router;
     use tower::ServiceExt;
 
     fn test_router(state: Arc<DaemonState>) -> Router {
@@ -200,7 +196,11 @@ mod tests {
             .route("/api/v1/pause", post(pause_handler))
             .route("/api/v1/resume", post(resume_handler))
             .route("/api/v1/new-session", post(new_session_handler))
-            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
+            .with_state(AppState::new(
+                state,
+                crate::http::EventBroadcaster::default(),
+                Arc::new(Metrics::new()),
+            ))
     }
 
     async fn read_json(response: axum::http::Response<axum::body::Body>) -> serde_json::Value {
@@ -312,7 +312,9 @@ mod tests {
         let payload = read_json(response).await;
         assert_eq!(payload["success"], true);
         assert!(
-            payload["session_id"].as_str().is_some_and(|id| !id.is_empty()),
+            payload["session_id"]
+                .as_str()
+                .is_some_and(|id| !id.is_empty()),
             "session_id should be a non-empty string"
         );
     }

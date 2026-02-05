@@ -2,18 +2,20 @@ use std::convert::Infallible;
 use std::time::Duration;
 
 use axum::extract::State;
-use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use tokio::sync::broadcast;
-use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tracing::warn;
 
 use crate::http::server::AppState;
 use crate::notify::events::NotificationEvent;
+#[cfg(test)]
+use crate::telemetry::Metrics;
 
 #[derive(Debug, Serialize)]
 struct ConnectedEvent {
@@ -76,11 +78,11 @@ fn notification_event(event: NotificationEvent) -> Event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::body::Body;
-    use axum::http::header::CONTENT_TYPE;
-    use axum::http::Request;
-    use axum::routing::get;
     use axum::Router;
+    use axum::body::Body;
+    use axum::http::Request;
+    use axum::http::header::CONTENT_TYPE;
+    use axum::routing::get;
     use http_body_util::BodyExt;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -118,7 +120,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_sse_content_type() {
-        let state = AppState::new(Arc::new(DaemonState::new()), EventBroadcaster::default());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
+            Arc::new(Metrics::new()),
+        );
         let response = test_router(state)
             .oneshot(
                 Request::builder()
@@ -140,7 +146,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_initial_connected_event_sent() {
-        let state = AppState::new(Arc::new(DaemonState::new()), EventBroadcaster::default());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
+            Arc::new(Metrics::new()),
+        );
         let response = test_router(state)
             .oneshot(
                 Request::builder()
@@ -160,7 +170,11 @@ mod tests {
     #[tokio::test]
     async fn test_notification_event_formatting() {
         let broadcaster = EventBroadcaster::default();
-        let state = AppState::new(Arc::new(DaemonState::new()), broadcaster.clone());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            broadcaster.clone(),
+            Arc::new(Metrics::new()),
+        );
         let response = test_router(state)
             .oneshot(
                 Request::builder()
@@ -183,7 +197,11 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_clients_receive_same_event() {
         let broadcaster = EventBroadcaster::default();
-        let state = AppState::new(Arc::new(DaemonState::new()), broadcaster.clone());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            broadcaster.clone(),
+            Arc::new(Metrics::new()),
+        );
         let router = test_router(state);
 
         let response_one = router
@@ -222,7 +240,11 @@ mod tests {
     #[tokio::test]
     async fn test_client_disconnect_does_not_affect_others() {
         let broadcaster = EventBroadcaster::default();
-        let state = AppState::new(Arc::new(DaemonState::new()), broadcaster.clone());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            broadcaster.clone(),
+            Arc::new(Metrics::new()),
+        );
         let router = test_router(state);
 
         let response_one = router
@@ -261,7 +283,11 @@ mod tests {
     async fn test_keep_alive_heartbeat_sent_after_idle() {
         tokio::time::pause();
         let broadcaster = EventBroadcaster::default();
-        let state = AppState::new(Arc::new(DaemonState::new()), broadcaster.clone());
+        let state = AppState::new(
+            Arc::new(DaemonState::new()),
+            broadcaster.clone(),
+            Arc::new(Metrics::new()),
+        );
         let response = test_router(state)
             .oneshot(
                 Request::builder()

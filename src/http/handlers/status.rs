@@ -1,10 +1,10 @@
-#[cfg(test)]
-use std::sync::Arc;
-
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
 use serde::Serialize;
+
+#[cfg(test)]
+use std::sync::Arc;
 
 use crate::config::schema::{DaemonConfig, MonitoringConfig};
 use crate::daemon::pid::PidFile;
@@ -12,6 +12,8 @@ use crate::daemon::state::DaemonState;
 use crate::http::server::AppState;
 use crate::ipc::protocol::DaemonStatus;
 use crate::ipc::socket::DaemonStateAccess;
+#[cfg(test)]
+use crate::telemetry::Metrics;
 
 /// Envelope wrapper for status API response per ARCH23.
 ///
@@ -109,9 +111,7 @@ impl ConfigSummary {
 }
 
 /// Handles GET /api/v1/status requests with daemon status payload.
-pub async fn status_handler(
-    State(state): State<AppState>,
-) -> (StatusCode, Json<StatusEnvelope>) {
+pub async fn status_handler(State(state): State<AppState>) -> (StatusCode, Json<StatusEnvelope>) {
     let daemon_state = state.daemon_state();
     let response = StatusEnvelope::new(build_status_snapshot(daemon_state));
     (StatusCode::OK, Json(response))
@@ -137,15 +137,19 @@ fn build_config_summary(state: &DaemonState) -> ConfigSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::Router;
     use axum::body::to_bytes;
     use axum::routing::get;
-    use axum::Router;
     use tower::ServiceExt;
 
     fn test_router(state: Arc<DaemonState>) -> Router {
         Router::new()
             .route("/api/v1/status", get(status_handler))
-            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
+            .with_state(AppState::new(
+                state,
+                crate::http::EventBroadcaster::default(),
+                Arc::new(Metrics::new()),
+            ))
     }
 
     #[tokio::test]
@@ -172,10 +176,26 @@ mod tests {
         assert!(payload["data"]["stats"]["uptime_secs"].as_u64().is_some());
         assert!(payload["data"]["stats"]["saves_count"].as_u64().is_some());
         assert!(payload["data"]["stats"]["total_resumes"].as_u64().is_some());
-        assert!(payload["data"]["config_summary"]["http_enabled"].as_bool().is_some());
-        assert!(payload["data"]["config_summary"]["http_port"].as_u64().is_some());
-        assert!(payload["data"]["config_summary"]["auto_detect"].as_bool().is_some());
-        assert!(payload["data"]["config_summary"]["assistants"].as_array().is_some());
+        assert!(
+            payload["data"]["config_summary"]["http_enabled"]
+                .as_bool()
+                .is_some()
+        );
+        assert!(
+            payload["data"]["config_summary"]["http_port"]
+                .as_u64()
+                .is_some()
+        );
+        assert!(
+            payload["data"]["config_summary"]["auto_detect"]
+                .as_bool()
+                .is_some()
+        );
+        assert!(
+            payload["data"]["config_summary"]["assistants"]
+                .as_array()
+                .is_some()
+        );
     }
 
     #[tokio::test]
@@ -221,8 +241,17 @@ mod tests {
         } else {
             assert!(payload["data"]["current_session"].is_null());
         }
-        assert_eq!(payload["data"]["stats"]["uptime_secs"], snapshot.uptime_secs);
-        assert_eq!(payload["data"]["stats"]["saves_count"], snapshot.saves_count);
-        assert_eq!(payload["data"]["stats"]["total_resumes"], snapshot.total_resumes);
+        assert_eq!(
+            payload["data"]["stats"]["uptime_secs"],
+            snapshot.uptime_secs
+        );
+        assert_eq!(
+            payload["data"]["stats"]["saves_count"],
+            snapshot.saves_count
+        );
+        assert_eq!(
+            payload["data"]["stats"]["total_resumes"],
+            snapshot.total_resumes
+        );
     }
 }

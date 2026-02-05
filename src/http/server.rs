@@ -16,6 +16,7 @@ use crate::config::schema::DaemonConfig;
 use crate::daemon::state::DaemonState;
 use crate::http::events::EventBroadcaster;
 use crate::http::handlers;
+use crate::telemetry::Metrics;
 
 /// HTTP API server for external integrations.
 pub struct HttpServer {
@@ -30,13 +31,19 @@ pub struct HttpServer {
 pub struct AppState {
     daemon_state: Arc<DaemonState>,
     events: EventBroadcaster,
+    metrics: Arc<Metrics>,
 }
 
 impl AppState {
-    pub fn new(daemon_state: Arc<DaemonState>, events: EventBroadcaster) -> Self {
+    pub fn new(
+        daemon_state: Arc<DaemonState>,
+        events: EventBroadcaster,
+        metrics: Arc<Metrics>,
+    ) -> Self {
         Self {
             daemon_state,
             events,
+            metrics,
         }
     }
 
@@ -46,6 +53,10 @@ impl AppState {
 
     pub fn events(&self) -> &EventBroadcaster {
         &self.events
+    }
+
+    pub fn metrics(&self) -> &Arc<Metrics> {
+        &self.metrics
     }
 }
 
@@ -135,12 +146,17 @@ impl HttpServer {
     }
 
     fn create_router(state: Arc<DaemonState>, events: EventBroadcaster) -> Router {
-        let app_state = AppState::new(state, events);
+        let metrics = Arc::new(Metrics::new());
+        let app_state = AppState::new(state, events, metrics);
         Router::new()
             .route("/health", axum::routing::get(handlers::health::health_handler))
             .route(
                 "/api/v1/status",
                 axum::routing::get(handlers::status::status_handler),
+            )
+            .route(
+                "/api/v1/metrics",
+                axum::routing::get(handlers::metrics::metrics_handler),
             )
             .route(
                 "/api/v1/events",
@@ -223,8 +239,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use tower::ServiceExt;
-    use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::layer::SubscriberExt;
 
     use crate::test_utils::TRACING_LOCK;
 
@@ -434,7 +450,11 @@ mod tests {
         let mut response = None;
         for attempt in 0..10 {
             tokio::time::sleep(Duration::from_millis(20 * (attempt + 1))).await;
-            if let Ok(resp) = client.get(format!("http://127.0.0.1:{port}/missing")).send().await {
+            if let Ok(resp) = client
+                .get(format!("http://127.0.0.1:{port}/missing"))
+                .send()
+                .await
+            {
                 response = Some(resp);
                 break;
             }

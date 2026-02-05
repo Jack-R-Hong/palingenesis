@@ -1,14 +1,17 @@
-#[cfg(test)]
-use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(test)]
+use std::sync::Arc;
+
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
 use serde::Serialize;
 
 use crate::daemon::state::DaemonState;
 use crate::http::server::AppState;
+#[cfg(test)]
+use crate::telemetry::Metrics;
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct HealthEnvelope {
@@ -51,9 +54,7 @@ impl HealthResponse {
 }
 
 /// Handles GET /health requests with daemon uptime and status.
-pub async fn health_handler(
-    State(state): State<AppState>,
-) -> (StatusCode, Json<HealthEnvelope>) {
+pub async fn health_handler(State(state): State<AppState>) -> (StatusCode, Json<HealthEnvelope>) {
     let daemon_state = state.daemon_state();
     let issues = collect_health_issues(daemon_state);
     let status = if issues.is_empty() {
@@ -110,9 +111,9 @@ fn format_uptime(duration: Duration) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::Router;
     use axum::body::to_bytes;
     use axum::routing::get;
-    use axum::Router;
     use std::time::Instant;
     use tower::ServiceExt;
 
@@ -121,7 +122,11 @@ mod tests {
     fn test_router(state: Arc<DaemonState>) -> Router {
         Router::new()
             .route("/health", get(health_handler))
-            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
+            .with_state(AppState::new(
+                state,
+                crate::http::EventBroadcaster::default(),
+                Arc::new(Metrics::new()),
+            ))
     }
 
     #[tokio::test]
@@ -143,7 +148,9 @@ mod tests {
         assert_eq!(payload["success"], true);
         assert_eq!(payload["data"]["status"], "ok");
         assert!(
-            payload["data"]["uptime"].as_str().is_some_and(|s| !s.is_empty()),
+            payload["data"]["uptime"]
+                .as_str()
+                .is_some_and(|s| !s.is_empty()),
             "uptime should be a non-empty string"
         );
         assert!(payload["data"].get("issues").is_none());
@@ -151,10 +158,16 @@ mod tests {
 
     #[test]
     fn test_format_uptime() {
-        assert_eq!(format_uptime(Duration::from_secs(2 * 3600 + 30 * 60)), "2h30m");
+        assert_eq!(
+            format_uptime(Duration::from_secs(2 * 3600 + 30 * 60)),
+            "2h30m"
+        );
         assert_eq!(format_uptime(Duration::from_secs(15 * 60)), "15m");
         assert_eq!(format_uptime(Duration::from_secs(45)), "45s");
-        assert_eq!(format_uptime(Duration::from_secs(3 * 86400 + 2 * 3600)), "3d2h");
+        assert_eq!(
+            format_uptime(Duration::from_secs(3 * 86400 + 2 * 3600)),
+            "3d2h"
+        );
         assert_eq!(format_uptime(Duration::from_secs(86400)), "1d0h");
     }
 
@@ -173,7 +186,11 @@ mod tests {
             .unwrap();
         let elapsed = start.elapsed();
         assert_eq!(response.status(), StatusCode::OK);
-        assert!(elapsed < Duration::from_millis(100), "elapsed: {:?}", elapsed);
+        assert!(
+            elapsed < Duration::from_millis(100),
+            "elapsed: {:?}",
+            elapsed
+        );
     }
 
     #[tokio::test]
@@ -217,6 +234,9 @@ mod tests {
         let json = serde_json::to_value(&response).unwrap();
         assert_eq!(json["status"], "degraded");
         assert_eq!(json["uptime"], "1h30m");
-        assert_eq!(json["issues"], serde_json::json!(["paused", "config_unavailable"]));
+        assert_eq!(
+            json["issues"],
+            serde_json::json!(["paused", "config_unavailable"])
+        );
     }
 }

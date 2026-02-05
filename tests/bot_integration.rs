@@ -2,20 +2,21 @@ use std::env;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::routing::post;
-use axum::Router;
 use ed25519_dalek::Signer;
 use hmac::Mac;
-use rand::rngs::OsRng;
 use rand::RngCore;
+use rand::rngs::OsRng;
 use serde_json::json;
 use tower::ServiceExt;
 
 use palingenesis::daemon::state::DaemonState;
 use palingenesis::http::handlers;
 use palingenesis::http::{AppState, EventBroadcaster};
+use palingenesis::telemetry::Metrics;
 static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 fn set_env_var(key: &str, value: impl AsRef<std::ffi::OsStr>) {
@@ -43,6 +44,7 @@ fn test_router() -> Router {
         .with_state(AppState::new(
             Arc::new(DaemonState::new()),
             EventBroadcaster::default(),
+            Arc::new(Metrics::new()),
         ))
 }
 
@@ -236,9 +238,7 @@ async fn test_unauthorized_user_rejected() {
         .await
         .unwrap();
     let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let text = payload["blocks"][0]["text"]["text"]
-        .as_str()
-        .unwrap();
+    let text = payload["blocks"][0]["text"]["text"].as_str().unwrap();
     assert!(text.contains("Unauthorized"));
     remove_env_var("PALINGENESIS_CONFIG");
 }
