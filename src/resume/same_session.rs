@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -11,6 +11,7 @@ use crate::monitor::session::{Session, StepValue};
 use crate::resume::backoff::{Backoff, BackoffConfig};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
 use crate::state::{AuditLogger, CurrentSession, StateStore};
+use crate::telemetry::Metrics;
 
 /// Configuration for same-session resume.
 #[derive(Debug, Clone)]
@@ -205,12 +206,21 @@ impl SameSessionStrategy {
             }
         }
     }
-
 }
 
 #[async_trait]
 impl ResumeStrategy for SameSessionStrategy {
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
+        let start = Instant::now();
+        let metrics = Metrics::global();
+        if let Some(metrics) = metrics.as_ref() {
+            let reason = ctx
+                .stop_reason
+                .metrics_reason_label()
+                .unwrap_or("manual");
+            metrics.set_retry_attempts(ctx.attempt_number);
+            metrics.record_resume_started(reason);
+        }
         let audit_logger = Self::audit_logger();
         if let Some(logger) = &audit_logger {
             let _ = logger.log_resume_started(&ctx.session_path, &format!("{:?}", ctx.stop_reason));
@@ -228,18 +238,25 @@ impl ResumeStrategy for SameSessionStrategy {
                     &format!("Retry limit exceeded after {} attempts", ctx.attempt_number),
                 );
             }
+            if let Some(metrics) = metrics.as_ref() {
+                metrics.record_resume_completed(start.elapsed(), false, Some("retry_exceeded"));
+                metrics.set_retry_attempts(0);
+            }
             return Ok(ResumeOutcome::failure(
-                format!(
-                    "Retry limit exceeded after {} attempts",
-                    ctx.attempt_number
-                ),
+                format!("Retry limit exceeded after {} attempts", ctx.attempt_number),
                 false,
             ));
         }
 
         let wait_duration = self.wait_duration(ctx);
         if !self.wait_or_cancel(wait_duration).await {
+            if let Some(metrics) = metrics.as_ref() {
+                metrics.set_retry_attempts(0);
+            }
             return Ok(ResumeOutcome::skipped("same-session resume cancelled"));
+        }
+        if let Some(metrics) = metrics.as_ref() {
+            metrics.record_wait(wait_duration);
         }
 
         match self.trigger.trigger(ctx).await {
@@ -250,6 +267,10 @@ impl ResumeStrategy for SameSessionStrategy {
                         &ctx.session_path,
                         "Resumed same session after rate limit",
                     );
+                }
+                if let Some(metrics) = metrics.as_ref() {
+                    metrics.record_resume_completed(start.elapsed(), true, None);
+                    metrics.set_retry_attempts(0);
                 }
                 Ok(ResumeOutcome::success(
                     ctx.session_path.clone(),
@@ -262,6 +283,12 @@ impl ResumeStrategy for SameSessionStrategy {
                     let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
                 }
                 let retryable = ctx.attempt_number < self.config.max_retries;
+                if let Some(metrics) = metrics.as_ref() {
+                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    if !retryable {
+                        metrics.set_retry_attempts(0);
+                    }
+                }
                 if retryable {
                     let next_delay = self.backoff_delay(ctx.attempt_number + 1);
                     Ok(ResumeOutcome::delayed(
@@ -286,7 +313,10 @@ impl Default for SameSessionStrategy {
     }
 }
 
-fn current_session_from_metadata(session: &Session, session_path: &std::path::Path) -> CurrentSession {
+fn current_session_from_metadata(
+    session: &Session,
+    session_path: &std::path::Path,
+) -> CurrentSession {
     let steps_completed = session
         .state
         .steps_completed

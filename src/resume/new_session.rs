@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Instant;
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -11,6 +12,7 @@ use crate::monitor::session::{Session, StepValue};
 use crate::resume::backup::{BackupConfig, BackupHandler, SessionBackup};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
 use crate::state::{AuditLogger, CurrentSession, StateStore};
+use crate::telemetry::Metrics;
 
 /// Configuration for new-session resume.
 #[derive(Debug, Clone)]
@@ -33,8 +35,9 @@ impl Default for NewSessionConfig {
     fn default() -> Self {
         Self {
             next_step_filename: "Next-step.md".to_string(),
-            prompt_template: "Starting new session from step {step}: {description}\n\nContext:\n{context}"
-                .to_string(),
+            prompt_template:
+                "Starting new session from step {step}: {description}\n\nContext:\n{context}"
+                    .to_string(),
             enable_backup: true,
             max_backups: 10,
             backup_timestamp_format: "%Y%m%d-%H%M%S".to_string(),
@@ -140,7 +143,10 @@ impl NewSessionStrategy {
         self
     }
 
-    async fn read_next_step(&self, session_dir: &Path) -> Result<Option<NextStepInfo>, ResumeError> {
+    async fn read_next_step(
+        &self,
+        session_dir: &Path,
+    ) -> Result<Option<NextStepInfo>, ResumeError> {
         let next_step_path = session_dir.join(&self.config.next_step_filename);
         match fs::read_to_string(&next_step_path).await {
             Ok(content) => {
@@ -186,8 +192,8 @@ impl NewSessionStrategy {
         }
 
         let step_number = step_number?;
-        let description = description
-            .unwrap_or_else(|| format!("Continue from step {}", step_number));
+        let description =
+            description.unwrap_or_else(|| format!("Continue from step {}", step_number));
 
         Some(NextStepInfo {
             step_number,
@@ -280,11 +286,7 @@ impl NewSessionStrategy {
 
         state.stats.total_resumes = state.stats.total_resumes.saturating_add(1);
         state.stats.last_resume = Some(Utc::now());
-        state.current_session = Some(self.build_current_session(
-            ctx,
-            new_session_path,
-            next_step,
-        ));
+        state.current_session = Some(self.build_current_session(ctx, new_session_path, next_step));
 
         store
             .save(&state)
@@ -302,22 +304,39 @@ impl NewSessionStrategy {
             }
         }
     }
-
 }
 
 #[async_trait]
 impl ResumeStrategy for NewSessionStrategy {
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
+        let start = Instant::now();
+        let metrics = Metrics::global();
+        if let Some(metrics) = metrics.as_ref() {
+            let reason = ctx
+                .stop_reason
+                .metrics_reason_label()
+                .unwrap_or("manual");
+            metrics.set_retry_attempts(ctx.attempt_number);
+            metrics.record_resume_started(reason);
+        }
         let audit_logger = Self::audit_logger();
         if let Some(logger) = &audit_logger {
             let _ = logger.log_resume_started(&ctx.session_path, &format!("{:?}", ctx.stop_reason));
         }
 
-        let session_dir = ctx.session_path.parent().ok_or_else(|| {
-            ResumeError::SessionNotFound {
-                path: ctx.session_path.clone(),
+        let session_dir = match ctx.session_path.parent() {
+            Some(dir) => dir,
+            None => {
+                let err = ResumeError::SessionNotFound {
+                    path: ctx.session_path.clone(),
+                };
+                if let Some(metrics) = metrics.as_ref() {
+                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    metrics.set_retry_attempts(0);
+                }
+                return Err(err);
             }
-        })?;
+        };
 
         if self.config.enable_backup {
             match self.backup.backup(&ctx.session_path).await {
@@ -364,6 +383,10 @@ impl ResumeStrategy for NewSessionStrategy {
                 if let Some(logger) = &audit_logger {
                     let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
                 }
+                if let Some(metrics) = metrics.as_ref() {
+                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    metrics.set_retry_attempts(0);
+                }
                 return Err(err);
             }
         };
@@ -382,6 +405,10 @@ impl ResumeStrategy for NewSessionStrategy {
             if let Some(logger) = &audit_logger {
                 let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
             }
+            if let Some(metrics) = metrics.as_ref() {
+                metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                metrics.set_retry_attempts(0);
+            }
             return Err(err);
         }
 
@@ -390,6 +417,12 @@ impl ResumeStrategy for NewSessionStrategy {
                 &ctx.session_path,
                 &format!("Started new session from step {}", next_step.step_number),
             );
+        }
+
+        if let Some(metrics) = metrics.as_ref() {
+            metrics.record_session_started();
+            metrics.record_resume_completed(start.elapsed(), true, None);
+            metrics.set_retry_attempts(0);
         }
 
         Ok(ResumeOutcome::success(

@@ -23,3 +23,16 @@ pub enum ResumeError {
     #[error("Retry limit exceeded after {attempts} attempts")]
     RetryExceeded { attempts: u32 },
 }
+
+impl ResumeError {
+    pub fn error_label(&self) -> &'static str {
+        match self {
+            ResumeError::Io(_) => "io",
+            ResumeError::SessionNotFound { .. } => "session_not_found",
+            ResumeError::CommandFailed { .. } => "command_failed",
+            ResumeError::Timeout { .. } => "timeout",
+            ResumeError::Config(_) => "config",
+            ResumeError::RetryExceeded { .. } => "retry_exceeded",
+        }
+    }
+}
