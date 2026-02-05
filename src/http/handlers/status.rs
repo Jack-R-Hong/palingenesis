@@ -1,3 +1,4 @@
+#[cfg(test)]
 use std::sync::Arc;
 
 use axum::extract::State;
@@ -8,6 +9,7 @@ use serde::Serialize;
 use crate::config::schema::{DaemonConfig, MonitoringConfig};
 use crate::daemon::pid::PidFile;
 use crate::daemon::state::DaemonState;
+use crate::http::server::AppState;
 use crate::ipc::protocol::DaemonStatus;
 use crate::ipc::socket::DaemonStateAccess;
 
@@ -92,11 +94,12 @@ impl ConfigSummary {
 
 /// Handles GET /api/v1/status requests with daemon status payload.
 pub async fn status_handler(
-    State(state): State<Arc<DaemonState>>,
+    State(state): State<AppState>,
 ) -> (StatusCode, Json<StatusEnvelope>) {
-    let status = state.get_status();
+    let daemon_state = state.daemon_state();
+    let status = daemon_state.get_status();
     let pid = read_daemon_pid();
-    let config_summary = build_config_summary(&state);
+    let config_summary = build_config_summary(daemon_state);
     let response = StatusEnvelope::new(StatusResponse::from_status(status, pid, config_summary));
     (StatusCode::OK, Json(response))
 }
@@ -122,7 +125,7 @@ mod tests {
     fn test_router(state: Arc<DaemonState>) -> Router {
         Router::new()
             .route("/api/v1/status", get(status_handler))
-            .with_state(state)
+            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
     }
 
     #[tokio::test]

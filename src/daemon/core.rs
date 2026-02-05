@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use chrono::Utc;
 use tokio::sync::mpsc;
 use tokio::time;
 use tokio_util::sync::CancellationToken;
@@ -9,8 +10,9 @@ use crate::daemon::pid::{PidError, PidFile};
 use crate::daemon::shutdown::{SHUTDOWN_TIMEOUT, ShutdownCoordinator, ShutdownResult};
 use crate::daemon::signals::{listen_for_signals, DaemonSignal};
 use crate::daemon::state::DaemonState;
-use crate::http::HttpServer;
+use crate::http::{EventBroadcaster, HttpServer};
 use crate::ipc::socket::{DaemonStateAccess, IpcError, IpcServer};
+use crate::notify::events::NotificationEvent;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DaemonError {
@@ -27,6 +29,7 @@ pub struct Daemon {
     shutdown: ShutdownCoordinator,
     state: Arc<DaemonState>,
     http_handle: Option<tokio::task::JoinHandle<()>>,
+    event_broadcaster: EventBroadcaster,
 }
 
 impl Daemon {
@@ -37,6 +40,7 @@ impl Daemon {
             shutdown: ShutdownCoordinator::new(),
             state: Arc::new(DaemonState::new()),
             http_handle: None,
+            event_broadcaster: EventBroadcaster::default(),
         }
     }
 
@@ -50,6 +54,11 @@ impl Daemon {
             }
             return Err(err.into());
         }
+
+        let _ = self.event_broadcaster.send(NotificationEvent::DaemonStarted {
+            timestamp: Utc::now(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        });
 
         let cancel = self.shutdown.cancel_token();
 
@@ -87,7 +96,12 @@ impl Daemon {
         }
 
         if let Some(config) = self.state.daemon_config() {
-            match HttpServer::from_config(&config, cancel.clone(), Arc::clone(&self.state)) {
+            match HttpServer::from_config(
+                &config,
+                cancel.clone(),
+                Arc::clone(&self.state),
+                self.event_broadcaster.clone(),
+            ) {
                 Ok(Some(server)) => {
                     let server_cancel = cancel.clone();
                     let handle = tokio::spawn(async move {
@@ -136,6 +150,11 @@ impl Daemon {
                 Err(_) => warn!("HTTP server shutdown timed out"),
             }
         }
+
+        let _ = self.event_broadcaster.send(NotificationEvent::DaemonStopped {
+            timestamp: Utc::now(),
+            reason: "shutdown".to_string(),
+        });
 
         self.pid_file.release()?;
         Ok(())

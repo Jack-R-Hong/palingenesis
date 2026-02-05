@@ -14,6 +14,7 @@ use tracing::{info, warn};
 
 use crate::config::schema::DaemonConfig;
 use crate::daemon::state::DaemonState;
+use crate::http::events::EventBroadcaster;
 use crate::http::handlers;
 
 /// HTTP API server for external integrations.
@@ -21,6 +22,31 @@ pub struct HttpServer {
     bind_addr: SocketAddr,
     router: Router,
     shutdown: CancellationToken,
+    events: EventBroadcaster,
+}
+
+/// Shared application state for HTTP handlers.
+#[derive(Clone)]
+pub struct AppState {
+    daemon_state: Arc<DaemonState>,
+    events: EventBroadcaster,
+}
+
+impl AppState {
+    pub fn new(daemon_state: Arc<DaemonState>, events: EventBroadcaster) -> Self {
+        Self {
+            daemon_state,
+            events,
+        }
+    }
+
+    pub fn daemon_state(&self) -> &Arc<DaemonState> {
+        &self.daemon_state
+    }
+
+    pub fn events(&self) -> &EventBroadcaster {
+        &self.events
+    }
 }
 
 impl HttpServer {
@@ -29,6 +55,7 @@ impl HttpServer {
         config: &DaemonConfig,
         shutdown: CancellationToken,
         state: Arc<DaemonState>,
+        events: EventBroadcaster,
     ) -> Result<Option<Self>> {
         if !config.http_enabled {
             return Ok(None);
@@ -39,6 +66,7 @@ impl HttpServer {
             config.http_port,
             shutdown,
             state,
+            events,
         )?))
     }
 
@@ -48,6 +76,7 @@ impl HttpServer {
         port: u16,
         shutdown: CancellationToken,
         state: Arc<DaemonState>,
+        events: EventBroadcaster,
     ) -> Result<Self> {
         let bind_addr: SocketAddr = format!("{bind}:{port}")
             .parse()
@@ -60,12 +89,13 @@ impl HttpServer {
             );
         }
 
-        let router = Self::create_router(state);
+        let router = Self::create_router(state, events.clone());
 
         Ok(Self {
             bind_addr,
             router,
             shutdown,
+            events,
         })
     }
 
@@ -75,6 +105,10 @@ impl HttpServer {
 
     pub fn shutdown(&self) {
         self.shutdown.cancel();
+    }
+
+    pub fn event_broadcaster(&self) -> EventBroadcaster {
+        self.events.clone()
     }
 
     /// Start the HTTP server and wait for shutdown.
@@ -100,12 +134,17 @@ impl HttpServer {
         Ok(())
     }
 
-    fn create_router(state: Arc<DaemonState>) -> Router {
+    fn create_router(state: Arc<DaemonState>, events: EventBroadcaster) -> Router {
+        let app_state = AppState::new(state, events);
         Router::new()
             .route("/health", axum::routing::get(handlers::health::health_handler))
             .route(
                 "/api/v1/status",
                 axum::routing::get(handlers::status::status_handler),
+            )
+            .route(
+                "/api/v1/events",
+                axum::routing::get(handlers::events::events_handler),
             )
             .route(
                 "/api/v1/pause",
@@ -120,7 +159,7 @@ impl HttpServer {
                 axum::routing::post(handlers::control::new_session_handler),
             )
             .fallback(Self::fallback_handler)
-            .with_state(state)
+            .with_state(app_state)
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(|request: &Request<Body>| {
@@ -243,6 +282,7 @@ mod tests {
             7654,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         assert_eq!(server.bind_addr(), "127.0.0.1:7654".parse().unwrap());
@@ -255,6 +295,7 @@ mod tests {
             7654,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         );
         assert!(result.is_err());
         let err_msg = result.err().unwrap().to_string();
@@ -268,6 +309,7 @@ mod tests {
             9001,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         assert_eq!(server.bind_addr().port(), 9001);
@@ -282,6 +324,7 @@ mod tests {
             7654,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
@@ -296,6 +339,7 @@ mod tests {
             &config,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         assert!(result.is_none());
@@ -308,6 +352,7 @@ mod tests {
             7654,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         let response = server
@@ -337,6 +382,7 @@ mod tests {
             7654,
             CancellationToken::new(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         let response = server
@@ -365,6 +411,7 @@ mod tests {
             port,
             shutdown.clone(),
             Arc::new(DaemonState::new()),
+            EventBroadcaster::default(),
         )
         .unwrap();
         let handle = tokio::spawn(async move {

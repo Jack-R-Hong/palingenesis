@@ -1,3 +1,4 @@
+#[cfg(test)]
 use std::sync::Arc;
 
 use axum::extract::State;
@@ -7,7 +8,9 @@ use axum::Json;
 use serde::Serialize;
 use uuid::Uuid;
 
+#[cfg(test)]
 use crate::daemon::state::DaemonState;
+use crate::http::server::AppState;
 use crate::ipc::socket::DaemonStateAccess;
 
 /// Error messages returned by DaemonState methods.
@@ -92,9 +95,10 @@ fn error_response(
 
 /// Handles POST /api/v1/pause requests to pause daemon monitoring.
 pub async fn pause_handler(
-    State(state): State<Arc<DaemonState>>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.pause() {
+    let daemon_state = state.daemon_state();
+    match daemon_state.pause() {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
         Err(message) if message == error_messages::ALREADY_PAUSED => {
             error_response("ALREADY_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
@@ -108,9 +112,10 @@ pub async fn pause_handler(
 
 /// Handles POST /api/v1/resume requests to resume daemon monitoring.
 pub async fn resume_handler(
-    State(state): State<Arc<DaemonState>>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.resume() {
+    let daemon_state = state.daemon_state();
+    match daemon_state.resume() {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
         Err(message) if message == error_messages::NOT_PAUSED => {
             error_response("NOT_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
@@ -124,9 +129,10 @@ pub async fn resume_handler(
 
 /// Handles POST /api/v1/new-session requests to start a new session.
 pub async fn new_session_handler(
-    State(state): State<Arc<DaemonState>>,
+    State(state): State<AppState>,
 ) -> impl IntoResponse {
-    match state.new_session() {
+    let daemon_state = state.daemon_state();
+    match daemon_state.new_session() {
         Ok(()) => {
             let session_id = Uuid::new_v4().to_string();
             let response = ControlResponseWithId::success(session_id);
@@ -152,7 +158,7 @@ mod tests {
             .route("/api/v1/pause", post(pause_handler))
             .route("/api/v1/resume", post(resume_handler))
             .route("/api/v1/new-session", post(new_session_handler))
-            .with_state(state)
+            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
     }
 
     async fn read_json(response: axum::http::Response<axum::body::Body>) -> serde_json::Value {

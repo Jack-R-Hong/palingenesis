@@ -1,3 +1,4 @@
+#[cfg(test)]
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,6 +8,7 @@ use axum::Json;
 use serde::Serialize;
 
 use crate::daemon::state::DaemonState;
+use crate::http::server::AppState;
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct HealthEnvelope {
@@ -50,15 +52,16 @@ impl HealthResponse {
 
 /// Handles GET /health requests with daemon uptime and status.
 pub async fn health_handler(
-    State(state): State<Arc<DaemonState>>,
+    State(state): State<AppState>,
 ) -> (StatusCode, Json<HealthEnvelope>) {
-    let issues = collect_health_issues(&state);
+    let daemon_state = state.daemon_state();
+    let issues = collect_health_issues(daemon_state);
     let status = if issues.is_empty() {
         HealthStatus::Ok
     } else {
         HealthStatus::Degraded
     };
-    let uptime = format_uptime(state.uptime());
+    let uptime = format_uptime(daemon_state.uptime());
     let response = HealthEnvelope::new(HealthResponse::new(status, uptime, issues));
     (StatusCode::OK, Json(response))
 }
@@ -118,7 +121,7 @@ mod tests {
     fn test_router(state: Arc<DaemonState>) -> Router {
         Router::new()
             .route("/health", get(health_handler))
-            .with_state(state)
+            .with_state(AppState::new(state, crate::http::EventBroadcaster::default()))
     }
 
     #[tokio::test]
