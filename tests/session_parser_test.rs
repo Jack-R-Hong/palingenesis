@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use palingenesis::monitor::events::{MonitorEvent, WatchEvent};
 use palingenesis::monitor::frontmatter::{
-    extract_frontmatter, parse_session, ParseError, SessionParser,
+    ParseError, SessionParser, extract_frontmatter, parse_session,
 };
 use palingenesis::monitor::session::StepValue;
 use tempfile::tempdir;

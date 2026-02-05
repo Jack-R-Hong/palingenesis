@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio::fs;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, Span};
 
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
@@ -331,8 +331,19 @@ impl NewSessionStrategy {
 
 #[async_trait]
 impl ResumeStrategy for NewSessionStrategy {
+    #[tracing::instrument(
+        name = "resume.new_session",
+        skip(self, ctx),
+        fields(
+            stop_reason = %ctx.stop_reason,
+            wait_duration_ms = tracing::field::Empty,
+            outcome = tracing::field::Empty,
+        )
+    )]
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
         let start = Instant::now();
+        let span = Span::current();
+        span.record("wait_duration_ms", 0);
         let metrics = Metrics::global();
         if let Some(metrics) = metrics.as_ref() {
             let reason = ctx
@@ -357,6 +368,7 @@ impl ResumeStrategy for NewSessionStrategy {
                     metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
                     metrics.set_retry_attempts(0);
                 }
+                span.record("outcome", "error");
                 return Err(err);
             }
         };
@@ -410,6 +422,7 @@ impl ResumeStrategy for NewSessionStrategy {
                     metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
                     metrics.set_retry_attempts(0);
                 }
+                span.record("outcome", "error");
                 return Err(err);
             }
         };
@@ -441,6 +454,7 @@ impl ResumeStrategy for NewSessionStrategy {
                 metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
                 metrics.set_retry_attempts(0);
             }
+            span.record("outcome", "error");
             return Err(err);
         }
 
@@ -457,10 +471,12 @@ impl ResumeStrategy for NewSessionStrategy {
             metrics.set_retry_attempts(0);
         }
 
-        Ok(ResumeOutcome::success(
+        let outcome = ResumeOutcome::success(
             new_session_path,
             format!("Started new session from step {}", next_step.step_number),
-        ))
+        );
+        span.record("outcome", outcome.label());
+        Ok(outcome)
     }
 
     fn name(&self) -> &'static str {

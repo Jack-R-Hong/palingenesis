@@ -69,9 +69,12 @@ impl NotificationChannel for NtfyChannel {
             request = request.header("Priority", priority);
         }
 
-        let response = request.send().await.map_err(|err| NotifyError::SendFailed {
-            message: format!("ntfy request error: {err}"),
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|err| NotifyError::SendFailed {
+                message: format!("ntfy request error: {err}"),
+            })?;
 
         if !response.status().is_success() {
             return Err(NotifyError::SendFailed {
@@ -79,7 +82,11 @@ impl NotificationChannel for NtfyChannel {
             });
         }
 
-        debug!(channel = self.name(), event_type = event.event_type(), "ntfy notification sent");
+        debug!(
+            channel = self.name(),
+            event_type = event.event_type(),
+            "ntfy notification sent"
+        );
         Ok(())
     }
 

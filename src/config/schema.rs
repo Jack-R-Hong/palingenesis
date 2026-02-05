@@ -316,11 +316,19 @@ pub struct OtelConfig {
     pub enabled: bool,
     /// OTLP endpoint.
     /// Example: endpoint = "http://localhost:4317"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub endpoint: Option<String>,
+    #[serde(default = "default_otel_endpoint")]
+    pub endpoint: String,
     /// Service name for telemetry.
     /// Example: service_name = "palingenesis"
     pub service_name: String,
+    /// Export protocol: "grpc" or "http".
+    /// Example: protocol = "http"
+    #[serde(default = "default_otel_protocol")]
+    pub protocol: String,
+    /// Sampling ratio 0.0-1.0.
+    /// Example: sampling_ratio = 1.0
+    #[serde(default = "default_otel_sampling_ratio")]
+    pub sampling_ratio: f64,
     /// Enable trace export.
     /// Example: traces = true
     pub traces: bool,
@@ -337,13 +345,27 @@ impl Default for OtelConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            endpoint: None,
+            endpoint: default_otel_endpoint(),
             service_name: "palingenesis".to_string(),
+            protocol: default_otel_protocol(),
+            sampling_ratio: default_otel_sampling_ratio(),
             traces: true,
             metrics: true,
             metrics_enabled: default_metrics_enabled(),
         }
     }
+}
+
+fn default_otel_endpoint() -> String {
+    "http://localhost:4317".to_string()
+}
+
+fn default_otel_protocol() -> String {
+    "http".to_string()
+}
+
+fn default_otel_sampling_ratio() -> f64 {
+    1.0
 }
 
 fn default_metrics_enabled() -> bool {
@@ -370,5 +392,21 @@ mod tests {
         let config: Config =
             toml::from_str("[metrics]\nmanual_restart_time_seconds = 900\n").unwrap();
         assert_eq!(config.metrics.manual_restart_time_seconds, 900);
+    }
+
+    #[test]
+    fn test_otel_defaults_apply() {
+        let config: Config = toml::from_str("[otel]\nenabled = true\n").unwrap();
+        let otel = config.otel.expect("otel config");
+        assert_eq!(otel.endpoint, "http://localhost:4317");
+        assert_eq!(otel.protocol, "http");
+        assert_eq!(otel.sampling_ratio, 1.0);
+    }
+
+    #[test]
+    fn test_otel_sampling_ratio_parsing() {
+        let config: Config = toml::from_str("[otel]\nsampling_ratio = 0.4\n").unwrap();
+        let otel = config.otel.expect("otel config");
+        assert_eq!(otel.sampling_ratio, 0.4);
     }
 }

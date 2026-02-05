@@ -41,11 +41,7 @@ struct TestCreator {
 
 #[async_trait]
 impl SessionCreator for TestCreator {
-    async fn create(
-        &self,
-        prompt: &str,
-        _session_dir: &Path,
-    ) -> Result<PathBuf, ResumeError> {
+    async fn create(&self, prompt: &str, _session_dir: &Path) -> Result<PathBuf, ResumeError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         let mut stored = self.prompt.lock().expect("prompt lock");
         *stored = Some(prompt.to_string());
@@ -89,7 +85,8 @@ async fn new_session_uses_next_step_file() {
     };
 
     let config = NewSessionConfig {
-        prompt_template: "Starting new session from step {step}: {description}\n{context}".to_string(),
+        prompt_template: "Starting new session from step {step}: {description}\n{context}"
+            .to_string(),
         ..NewSessionConfig::default()
     };
 
@@ -125,8 +122,7 @@ async fn new_session_parses_numbered_next_step() {
     std::fs::write(&session_path, "session").expect("session file");
 
     let next_step_path = temp.path().join("Next-step.md");
-    std::fs::write(&next_step_path, "5. Implement authentication")
-        .expect("next-step file");
+    std::fs::write(&next_step_path, "5. Implement authentication").expect("next-step file");
 
     let calls = Arc::new(AtomicUsize::new(0));
     let prompt = Arc::new(Mutex::new(None));

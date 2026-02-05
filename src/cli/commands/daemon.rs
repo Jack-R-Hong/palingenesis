@@ -1,16 +1,18 @@
 use tracing::warn;
 
 use crate::daemon::Daemon;
-use crate::telemetry::tracing::{init_tracing, TracingConfig};
+use crate::telemetry::otel::load_otel_config;
+use crate::telemetry::tracing::{TracingConfig, init_tracing};
 
 pub async fn handle_start(foreground: bool) -> anyhow::Result<()> {
+    let otel_config = load_otel_config();
     if !foreground {
         let config = TracingConfig {
             log_to_file: false,
             log_to_stderr: true,
             ..TracingConfig::default()
         };
-        let _guard = init_tracing(&config)?;
+        let _guard = init_tracing(&config, otel_config.as_ref())?;
         warn!("Daemonization not yet implemented (daemonize crate required)");
         return Ok(());
     }
@@ -20,7 +22,7 @@ pub async fn handle_start(foreground: bool) -> anyhow::Result<()> {
         log_to_stderr: true,
         ..TracingConfig::default()
     };
-    let _guard = init_tracing(&config)?;
+    let _guard = init_tracing(&config, otel_config.as_ref())?;
 
     let mut daemon = Daemon::new();
     daemon.run().await?;
@@ -28,11 +30,11 @@ pub async fn handle_start(foreground: bool) -> anyhow::Result<()> {
 }
 
 pub async fn handle_stop() -> anyhow::Result<()> {
+    use crate::daemon::pid::PidFile;
+    use nix::sys::signal::{Signal, kill};
+    use nix::unistd::Pid;
     use std::thread;
     use std::time::Duration;
-    use nix::sys::signal::{kill, Signal};
-    use nix::unistd::Pid;
-    use crate::daemon::pid::PidFile;
 
     let pid_file = PidFile::new();
 
@@ -92,7 +94,7 @@ pub async fn handle_reload() -> anyhow::Result<()> {
 
     #[cfg(unix)]
     {
-        use nix::sys::signal::{kill, Signal};
+        use nix::sys::signal::{Signal, kill};
         use nix::unistd::Pid;
 
         kill(Pid::from_raw(pid as i32), Signal::SIGHUP)?;

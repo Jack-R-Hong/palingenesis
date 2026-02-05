@@ -1,11 +1,16 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use std::time::Duration;
 
-use notify::{Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use notify_debouncer_full::{
-    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdCache,
+    DebounceEventResult, DebouncedEvent, Debouncer, FileIdCache, new_debouncer,
 };
 use tokio::sync::mpsc;
 use tokio::time::MissedTickBehavior;
@@ -87,10 +92,7 @@ impl SessionWatcher {
     }
 
     /// Run the file watcher, returning a receiver for watch events.
-    pub async fn run(
-        &self,
-        cancel: CancellationToken,
-    ) -> Result<WatchEventReceiver, WatcherError> {
+    pub async fn run(&self, cancel: CancellationToken) -> Result<WatchEventReceiver, WatcherError> {
         if self.running.swap(true, Ordering::SeqCst) {
             return Err(WatcherError::AlreadyRunning);
         }
@@ -319,7 +321,10 @@ fn map_event(kind: EventKind, path: PathBuf) -> Option<WatchEvent> {
 
 fn is_core_event(kind: &EventKind) -> bool {
     // Equivalent to filtering with EventKindMask::CORE (exclude access/open/close noise).
-    matches!(kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_))
+    matches!(
+        kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    )
 }
 
 async fn watch_with_retry<W: Watcher>(
@@ -416,9 +421,6 @@ mod tests {
 
         buffer_event(&mut buffer, &event);
         assert_eq!(buffer.len(), 1);
-        assert!(matches!(
-            buffer.values().next(),
-            Some(EventKind::Modify(_))
-        ));
+        assert!(matches!(buffer.values().next(), Some(EventKind::Modify(_))));
     }
 }

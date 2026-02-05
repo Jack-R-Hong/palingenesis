@@ -1,12 +1,14 @@
 ---
-stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories']
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+workflow_completed: true
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
 workflowType: 'epics-and-stories'
 project_name: 'palingenesis'
 user_name: 'Jack'
-date: '2026-02-05'
+date: '2026-02-06'
+newEpicsAdded: ['Epic 8: MCP Server Interface', 'Epic 9: OpenCode Process Management']
 ---
 
 # palingenesis - Epic Breakdown
@@ -72,6 +74,18 @@ This document provides the complete epic and story breakdown for palingenesis, d
 - FR38: User can view metrics dashboard in Grafana
 - FR39: Daemon can calculate and report "time saved" metric
 - FR40: Daemon can calculate and report "saves count" metric
+
+**MCP Server Interface - Growth (FR41-FR44)**
+- FR41: Daemon supports MCP stdio transport interface
+- FR42: MCP interface uses JSON-RPC 2.0 protocol
+- FR43: Daemon exposes control functions as MCP tools (status, pause, resume, new-session, logs)
+- FR44: Supports OpenCode `type: "local"` MCP configuration format
+
+**OpenCode Process Management - Growth (FR45-FR48)**
+- FR45: Daemon detects OpenCode process crash/exit
+- FR46: Daemon automatically restarts OpenCode via `opencode serve`
+- FR47: Daemon manages sessions via OpenCode HTTP API (`/session/*` endpoints)
+- FR48: User can configure OpenCode serve port/hostname via config file
 
 ### Non-Functional Requirements
 
@@ -189,6 +203,14 @@ This document provides the complete epic and story breakdown for palingenesis, d
 | FR38 | Epic 7 | Grafana dashboard |
 | FR39 | Epic 7 | Time saved metric |
 | FR40 | Epic 7 | Saves count metric |
+| FR41 | Epic 8 | MCP stdio transport interface |
+| FR42 | Epic 8 | JSON-RPC 2.0 protocol |
+| FR43 | Epic 8 | MCP tools (status, pause, resume, etc.) |
+| FR44 | Epic 8 | OpenCode local MCP config format |
+| FR45 | Epic 9 | Detect OpenCode process crash/exit |
+| FR46 | Epic 9 | Auto-restart OpenCode via serve |
+| FR47 | Epic 9 | Manage sessions via HTTP API |
+| FR48 | Epic 9 | Configure OpenCode serve port/hostname |
 
 ## Epic List
 
@@ -228,6 +250,18 @@ User can monitor and control daemon remotely via Discord/Slack commands or HTTP 
 ### Epic 7: Observability & Metrics
 User can view metrics in Prometheus/Grafana, see traces in Jaeger, and track "time saved" and "saves count".
 **FRs covered:** FR35, FR36, FR37, FR38, FR39, FR40
+**Priority:** Growth
+
+### Epic 8: MCP Server Interface
+OpenCode AI Agent can control palingenesis daemon via MCP protocol, enabling AI-driven workflow orchestration.
+**FRs covered:** FR41, FR42, FR43, FR44
+**ARCHs covered:** `src/mcp/` module (server.rs, tools.rs, handlers.rs)
+**Priority:** Growth
+
+### Epic 9: OpenCode Process Management
+Daemon monitors OpenCode process, automatically restarts it when crashed, and manages sessions via HTTP API for seamless recovery.
+**FRs covered:** FR45, FR46, FR47, FR48
+**ARCHs covered:** `src/opencode/` module (process.rs, client.rs, session.rs)
 **Priority:** Growth
 
 ---
@@ -2006,6 +2040,339 @@ So that I can visualize palingenesis metrics immediately.
 
 ---
 
+## Epic 8: MCP Server Interface
+
+OpenCode AI Agent can control palingenesis daemon via MCP protocol, enabling AI-driven workflow orchestration.
+
+### Story 8.1: MCP Server stdio Transport Setup
+
+As a daemon,
+I want to support MCP stdio transport,
+So that OpenCode can communicate with me via the MCP protocol.
+
+**Acceptance Criteria:**
+
+**Given** the daemon is started with `palingenesis mcp serve`
+**When** it initializes MCP mode
+**Then** it reads JSON-RPC messages from stdin
+**And** writes responses to stdout
+
+**Given** the MCP server is running
+**When** it receives a valid JSON-RPC request
+**Then** it parses and processes the request
+**And** returns a properly formatted JSON-RPC response
+
+**Given** the MCP server receives malformed JSON
+**When** parsing fails
+**Then** it returns a JSON-RPC error response with code -32700 (Parse error)
+**And** continues running (doesn't crash)
+
+**Given** the MCP server is running
+**When** stdin is closed (EOF)
+**Then** it shuts down gracefully
+
+**Technical Notes:**
+- Implements: FR41
+- Create `src/mcp/server.rs`
+- Use `rmcp` crate or implement JSON-RPC 2.0 manually
+- stdio transport: line-delimited JSON on stdin/stdout
+
+---
+
+### Story 8.2: JSON-RPC 2.0 Protocol Implementation
+
+As an MCP server,
+I want full JSON-RPC 2.0 compliance,
+So that any MCP client can communicate reliably.
+
+**Acceptance Criteria:**
+
+**Given** a JSON-RPC request with `method` and `id`
+**When** processed successfully
+**Then** response includes matching `id` and `result`
+
+**Given** a JSON-RPC request with invalid method
+**When** processed
+**Then** response includes error with code -32601 (Method not found)
+
+**Given** a JSON-RPC notification (no `id`)
+**When** processed
+**Then** no response is sent
+
+**Given** a batch request (array of requests)
+**When** processed
+**Then** batch response is returned with results in same order
+
+**Given** JSON-RPC 2.0 spec
+**When** any request is processed
+**Then** response always includes `"jsonrpc": "2.0"`
+
+**Technical Notes:**
+- Implements: FR42
+- Create `src/mcp/protocol.rs`
+- Support: requests, notifications, batch requests
+- Error codes per JSON-RPC 2.0 spec
+
+---
+
+### Story 8.3: MCP Tool Definitions
+
+As an MCP server,
+I want to expose palingenesis control functions as MCP tools,
+So that AI agents can discover and invoke them.
+
+**Acceptance Criteria:**
+
+**Given** MCP client sends `tools/list` request
+**When** server processes it
+**Then** response includes tool definitions for: `status`, `pause`, `resume`, `new_session`, `logs`
+
+**Given** each tool definition
+**When** listed
+**Then** it includes: name, description, inputSchema (JSON Schema)
+
+**Given** MCP client invokes `tools/call` with tool `status`
+**When** executed
+**Then** response includes current daemon status as JSON
+
+**Given** MCP client invokes `tools/call` with tool `pause`
+**When** daemon is monitoring
+**Then** daemon pauses and response confirms success
+
+**Given** MCP client invokes `tools/call` with tool `resume`
+**When** daemon is paused
+**Then** daemon resumes and response confirms success
+
+**Given** MCP client invokes `tools/call` with tool `new_session`
+**When** a session exists
+**Then** new session is started and response includes session info
+
+**Given** MCP client invokes `tools/call` with tool `logs` and `lines: 10`
+**When** executed
+**Then** response includes last 10 log lines
+
+**Technical Notes:**
+- Implements: FR43
+- Create `src/mcp/tools.rs` and `src/mcp/handlers.rs`
+- Tool input schemas use JSON Schema format
+- Tools delegate to same logic as CLI/HTTP commands
+
+---
+
+### Story 8.4: OpenCode Local MCP Configuration Support
+
+As a user,
+I want to configure palingenesis as a local MCP server in OpenCode,
+So that OpenCode can control the daemon automatically.
+
+**Acceptance Criteria:**
+
+**Given** OpenCode's MCP config format
+**When** user adds palingenesis
+**Then** config looks like:
+```json
+{
+  "mcpServers": {
+    "palingenesis": {
+      "type": "local",
+      "command": "palingenesis",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+**Given** the MCP server starts via OpenCode
+**When** initialization completes
+**Then** it sends proper MCP initialization response
+
+**Given** OpenCode sends `initialize` request
+**When** server responds
+**Then** response includes server info and capabilities
+
+**Given** OpenCode sends `initialized` notification
+**When** server receives it
+**Then** server is ready to accept tool calls
+
+**Given** config documentation
+**When** user reads it
+**Then** they can set up palingenesis MCP in <2 minutes
+
+**Technical Notes:**
+- Implements: FR44
+- Document in README: OpenCode MCP configuration
+- Support MCP protocol initialization handshake
+- Test with actual OpenCode integration
+
+---
+
+## Epic 9: OpenCode Process Management
+
+Daemon monitors OpenCode process, automatically restarts it when crashed, and manages sessions via HTTP API for seamless recovery.
+
+### Story 9.1: OpenCode Process Detection
+
+As a daemon,
+I want to detect when OpenCode process starts, stops, or crashes,
+So that I can respond appropriately.
+
+**Acceptance Criteria:**
+
+**Given** the daemon is monitoring
+**When** OpenCode process starts
+**Then** event `OpenCodeStarted` is logged with PID
+
+**Given** OpenCode is running
+**When** the process exits normally (exit code 0)
+**Then** event `OpenCodeStopped` is logged
+**And** reason is classified as `NormalExit`
+
+**Given** OpenCode is running
+**When** the process crashes (non-zero exit)
+**Then** event `OpenCodeCrashed` is logged with exit code
+**And** reason is classified as `Crash`
+
+**Given** OpenCode is running
+**When** the process is killed (SIGKILL/SIGTERM)
+**Then** event `OpenCodeKilled` is logged with signal
+
+**Given** daemon starts
+**When** OpenCode is already running
+**Then** it detects the existing process and begins monitoring
+
+**Technical Notes:**
+- Implements: FR45
+- Create `src/opencode/process.rs`
+- Detection methods: PID file, process list scan, or socket check
+- OpenCode may create a PID file or socket we can watch
+
+---
+
+### Story 9.2: Automatic OpenCode Restart
+
+As a daemon,
+I want to automatically restart OpenCode when it crashes,
+So that monitoring can continue without manual intervention.
+
+**Acceptance Criteria:**
+
+**Given** OpenCode crashes
+**When** auto_restart is enabled (default: true)
+**Then** daemon waits `restart_delay_ms` (default: 1000ms)
+**And** spawns `opencode serve` with configured options
+
+**Given** OpenCode is restarted
+**When** the process starts successfully
+**Then** daemon logs "OpenCode restarted (PID: N)"
+**And** begins monitoring the new process
+
+**Given** OpenCode restart fails
+**When** spawn returns error
+**Then** daemon logs error and retries with backoff
+**And** sends notification if configured
+
+**Given** OpenCode crashes repeatedly (3+ times in 5 minutes)
+**When** crash loop detected
+**Then** daemon pauses auto-restart
+**And** sends alert notification
+**And** logs "Crash loop detected, pausing auto-restart"
+
+**Given** auto_restart is disabled in config
+**When** OpenCode crashes
+**Then** daemon does NOT restart it
+**And** logs "OpenCode stopped, auto-restart disabled"
+
+**Technical Notes:**
+- Implements: FR46
+- Spawn command: `opencode serve --port {port} --hostname {hostname}`
+- Crash loop detection prevents infinite restart loops
+- Use `tokio::process::Command` for spawning
+
+---
+
+### Story 9.3: OpenCode HTTP API Client
+
+As a daemon,
+I want to communicate with OpenCode via its HTTP API,
+So that I can manage sessions programmatically.
+
+**Acceptance Criteria:**
+
+**Given** OpenCode server is running
+**When** daemon calls `GET /api/health`
+**Then** it receives health status
+**And** knows OpenCode is ready
+
+**Given** daemon needs to resume a session
+**When** it calls `POST /api/session/{id}/resume`
+**Then** session resumes and response confirms
+
+**Given** daemon needs to start new session
+**When** it calls `POST /api/session` with prompt
+**Then** new session starts and response includes session_id
+
+**Given** daemon needs session status
+**When** it calls `GET /api/session/{id}`
+**Then** it receives session state, messages, status
+
+**Given** OpenCode API is unreachable
+**When** request times out (5s default)
+**Then** error is logged and retry is scheduled
+
+**Given** OpenCode returns error response
+**When** status is 4xx/5xx
+**Then** error is parsed and logged with details
+
+**Technical Notes:**
+- Implements: FR47
+- Create `src/opencode/client.rs`
+- Use reqwest with configured base URL
+- Endpoints based on OpenCode HTTP API spec
+
+---
+
+### Story 9.4: OpenCode Configuration Options
+
+As a user,
+I want to configure OpenCode connection settings,
+So that palingenesis works with my OpenCode setup.
+
+**Acceptance Criteria:**
+
+**Given** config section `[opencode]`
+**When** user specifies `serve_port = 4096`
+**Then** daemon uses port 4096 for OpenCode API calls
+**And** passes `--port 4096` when restarting OpenCode
+
+**Given** config section `[opencode]`
+**When** user specifies `serve_hostname = "127.0.0.1"`
+**Then** daemon connects to that hostname
+**And** passes `--hostname 127.0.0.1` when restarting
+
+**Given** config section `[opencode]`
+**When** user specifies `auto_restart = false`
+**Then** daemon does NOT auto-restart crashed OpenCode
+
+**Given** config section `[opencode]`
+**When** user specifies `restart_delay_ms = 2000`
+**Then** daemon waits 2 seconds before restarting
+
+**Given** config section `[opencode]`
+**When** user specifies `health_check_interval = "10s"`
+**Then** daemon polls OpenCode health every 10 seconds
+
+**Given** default config
+**When** no `[opencode]` section exists
+**Then** defaults are used: port 4096, hostname 127.0.0.1, auto_restart true
+
+**Technical Notes:**
+- Implements: FR48
+- Add to `src/config/schema.rs`
+- Config structure matches PRD specification
+- Document all options in default config template
+
+---
+
 ## Summary
 
 | Epic | Stories | FRs Covered | Priority |
@@ -2017,6 +2384,8 @@ So that I can visualize palingenesis metrics immediately.
 | Epic 5: Event Notifications | 6 | FR26-30 | Growth |
 | Epic 6: Remote Control & External API | 6 | FR31-34 | Growth |
 | Epic 7: Observability & Metrics | 7 | FR35-40 | Growth |
-| **Total** | **55 stories** | **40 FRs** | |
+| Epic 8: MCP Server Interface | 4 | FR41-44 | Growth |
+| Epic 9: OpenCode Process Management | 4 | FR45-48 | Growth |
+| **Total** | **63 stories** | **48 FRs** | ✅ Complete |
 
 All functional requirements are covered. Stories are sized for single dev agent completion with clear acceptance criteria in Given/When/Then format.

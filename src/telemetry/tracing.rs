@@ -1,4 +1,6 @@
 use crate::config::paths::{PathError, Paths};
+use crate::config::schema::OtelConfig;
+use crate::telemetry::otel;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -51,6 +53,7 @@ pub enum TracingError {
 pub struct TracingGuard {
     _default_guard: tracing::subscriber::DefaultGuard,
     file: Option<Arc<Mutex<File>>>,
+    otel_enabled: bool,
 }
 
 impl Drop for TracingGuard {
@@ -59,6 +62,10 @@ impl Drop for TracingGuard {
             if let Ok(mut handle) = file.lock() {
                 let _ = handle.flush();
             }
+        }
+
+        if self.otel_enabled {
+            otel::shutdown_otel();
         }
     }
 }
@@ -106,7 +113,10 @@ impl<'a> MakeWriter<'a> for FileMakeWriter {
     }
 }
 
-pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError> {
+pub fn init_tracing(
+    config: &TracingConfig,
+    otel_config: Option<&OtelConfig>,
+) -> Result<TracingGuard, TracingError> {
     let env_filter = resolve_env_filter(config);
 
     let file = if config.log_to_file {
@@ -122,8 +132,11 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
         None
     };
 
-    let default_guard = match (config.log_to_stderr, file.as_ref()) {
-        (true, Some(file_ref)) => {
+    let otel_layer = otel_config.and_then(otel::build_otel_layer);
+    let otel_enabled = otel_layer.is_some();
+
+    let default_guard = match (config.log_to_stderr, file.as_ref(), otel_layer) {
+        (true, Some(file_ref), otel_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
             if config.json_format {
                 let stderr_layer = tracing_subscriber::fmt::layer()
@@ -142,6 +155,7 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                     .with(env_filter)
                     .with(stderr_layer)
                     .with(file_layer)
+                    .with(otel_layer)
                     .set_default()
             } else {
                 let stderr_layer = tracing_subscriber::fmt::layer()
@@ -158,10 +172,11 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                     .with(env_filter)
                     .with(stderr_layer)
                     .with(file_layer)
+                    .with(otel_layer)
                     .set_default()
             }
         }
-        (true, None) => {
+        (true, None, otel_layer) => {
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
                     .json()
@@ -172,6 +187,7 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                 tracing_subscriber::registry()
                     .with(env_filter)
                     .with(layer)
+                    .with(otel_layer)
                     .set_default()
             } else {
                 let layer = tracing_subscriber::fmt::layer()
@@ -182,10 +198,11 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                 tracing_subscriber::registry()
                     .with(env_filter)
                     .with(layer)
+                    .with(otel_layer)
                     .set_default()
             }
         }
-        (false, Some(file_ref)) => {
+        (false, Some(file_ref), otel_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
@@ -197,6 +214,7 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                 tracing_subscriber::registry()
                     .with(env_filter)
                     .with(layer)
+                    .with(otel_layer)
                     .set_default()
             } else {
                 let layer = tracing_subscriber::fmt::layer()
@@ -207,17 +225,20 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard, TracingError
                 tracing_subscriber::registry()
                     .with(env_filter)
                     .with(layer)
+                    .with(otel_layer)
                     .set_default()
             }
         }
-        (false, None) => tracing_subscriber::registry()
+        (false, None, otel_layer) => tracing_subscriber::registry()
             .with(env_filter)
+            .with(otel_layer)
             .set_default(),
     };
 
     Ok(TracingGuard {
         _default_guard: default_guard,
         file,
+        otel_enabled,
     })
 }
 
@@ -294,7 +315,7 @@ mod tests {
             json_format: true,
         };
 
-        let guard = init_tracing(&config).unwrap();
+        let guard = init_tracing(&config, None).unwrap();
         tracing::info!(test_field = 42, "telemetry test log");
         drop(guard);
 

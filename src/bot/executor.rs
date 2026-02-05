@@ -5,9 +5,9 @@ use std::sync::Arc;
 use crate::bot::commands::{BotCommand, BotCommandField, BotCommandResult};
 use crate::config::paths::Paths;
 use crate::daemon::state::DaemonState;
+use crate::http::EventBroadcaster;
 use crate::http::handlers::control::{new_session_daemon, pause_daemon, resume_daemon};
 use crate::http::handlers::status::build_status_snapshot;
-use crate::http::EventBroadcaster;
 
 pub struct CommandExecutor {
     daemon_state: Arc<DaemonState>,

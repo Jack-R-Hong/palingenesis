@@ -189,16 +189,18 @@ impl HttpServer {
                 TraceLayer::new_for_http()
                     .make_span_with(|request: &Request<Body>| {
                         tracing::info_span!(
-                            "http_request",
+                            "http.request",
                             method = %request.method(),
-                            uri = %request.uri(),
+                            path = %request.uri().path(),
+                            status_code = tracing::field::Empty,
                         )
                     })
                     .on_request(|request: &Request<Body>, _span: &tracing::Span| {
-                        tracing::info!(method = %request.method(), uri = %request.uri(), "http_request");
+                        tracing::info!(method = %request.method(), path = %request.uri().path(), "http.request");
                     })
-                    .on_response(|response: &axum::http::Response<_>, latency: Duration, _span: &tracing::Span| {
+                    .on_response(|response: &axum::http::Response<_>, latency: Duration, span: &tracing::Span| {
                         let status = response.status();
+                        span.record("status_code", status.as_u16());
                         if status.is_server_error() {
                             tracing::error!(%status, ?latency, "finished");
                         } else if status.is_client_error() {
@@ -423,7 +425,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
-        assert!(output.contains("http_request"));
+        assert!(output.contains("http.request"));
         assert!(output.contains("finished"));
     }
 

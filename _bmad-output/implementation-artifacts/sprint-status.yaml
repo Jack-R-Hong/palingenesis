@@ -1,9 +1,10 @@
 # Sprint Status - palingenesis
-# Generated: 2026-02-05
-# Project Key: NOKEY
-# Tracking System: file-system
-# Story Location: _bmad-output/implementation-artifacts
-#
+# generated: 2026-02-06
+# project: palingenesis
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
 # STATUS DEFINITIONS:
 # ==================
 # Epic Status:
@@ -11,20 +12,36 @@
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
 #
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
 # Story Status:
-#   - backlog: Story only exists in epic file (pending implementation)
+#   - backlog: Story only exists in epic file
 #   - ready-for-dev: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review
+#   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
 #
 # WORKFLOW NOTES:
 # ===============
-# - Stories 1.1-1.6: Implementation complete with artifacts in _bmad-output/implementation-artifacts/
-# - Stories 1.7-1.13: Pending implementation (no artifacts yet)
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-06
+project: palingenesis
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  # Epic 1: Installable CLI with Daemon Lifecycle
+  # Epic 1: Installable CLI with Daemon Lifecycle (MVP)
   epic-1: done
   1-1-project-initialization-from-starter-template: done
   1-2-cli-framework-with-clap-subcommands: done
@@ -41,7 +58,7 @@ development_status:
   1-13-graceful-shutdown-coordination: done
   epic-1-retrospective: done
 
-  # Epic 2: Session Detection & Classification
+  # Epic 2: Session Detection & Classification (MVP)
   epic-2: done
   2-1-file-system-watcher-setup: done
   2-2-session-file-parser-frontmatter-extraction: done
@@ -52,7 +69,7 @@ development_status:
   2-7-monitor-event-channel: done
   epic-2-retrospective: done
 
-  # Epic 3: Automatic Session Resumption
+  # Epic 3: Automatic Session Resumption (MVP)
   epic-3: done
   3-1-resume-strategy-trait: done
   3-2-same-session-resume-strategy: done
@@ -65,7 +82,7 @@ development_status:
   3-9-force-new-session-command: done
   epic-3-retrospective: done
 
-  # Epic 4: Configuration Management
+  # Epic 4: Configuration Management (MVP)
   epic-4: done
   4-1-config-schema-definition: done
   4-2-config-init-command: done
@@ -76,7 +93,7 @@ development_status:
   4-7-auto-detect-ai-assistants: done
   epic-4-retrospective: done
 
-  # Epic 5: Event Notifications
+  # Epic 5: Event Notifications (Growth)
   epic-5: done
   5-1-notification-dispatcher: done
   5-2-webhook-notifications: done
@@ -84,9 +101,9 @@ development_status:
   5-4-discord-webhook-integration: done
   5-5-slack-webhook-integration: done
   5-6-notification-events-definition: done
-  epic-5-retrospective: done
+  epic-5-retrospective: optional
 
-  # Epic 6: Remote Control & External API
+  # Epic 6: Remote Control & External API (Growth)
   epic-6: done
   6-1-http-api-server-setup: done
   6-2-health-endpoint: done
@@ -96,7 +113,7 @@ development_status:
   6-6-discord-slack-bot-commands: done
   epic-6-retrospective: done
 
-  # Epic 7: Observability & Metrics
+  # Epic 7: Observability & Metrics (Growth)
   epic-7: in-progress
   7-1-prometheus-metrics-endpoint: done
   7-2-core-metrics-implementation: done
@@ -106,3 +123,19 @@ development_status:
   7-6-otel-logs-export: backlog
   7-7-grafana-dashboard-template: backlog
   epic-7-retrospective: optional
+
+  # Epic 8: MCP Server Interface (Growth)
+  epic-8: backlog
+  8-1-mcp-server-stdio-transport-setup: backlog
+  8-2-json-rpc-2-0-protocol-implementation: backlog
+  8-3-mcp-tool-definitions: backlog
+  8-4-opencode-local-mcp-configuration-support: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: OpenCode Process Management (Growth)
+  epic-9: backlog
+  9-1-opencode-process-detection: backlog
+  9-2-automatic-opencode-restart: backlog
+  9-3-opencode-http-api-client: backlog
+  9-4-opencode-configuration-options: backlog
+  epic-9-retrospective: optional

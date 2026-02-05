@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, Span};
 
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
@@ -236,8 +236,19 @@ impl SameSessionStrategy {
 
 #[async_trait]
 impl ResumeStrategy for SameSessionStrategy {
+    #[tracing::instrument(
+        name = "resume.same_session",
+        skip(self, ctx),
+        fields(
+            stop_reason = %ctx.stop_reason,
+            wait_duration_ms = tracing::field::Empty,
+            outcome = tracing::field::Empty,
+        )
+    )]
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
         let start = Instant::now();
+        let span = Span::current();
+        span.record("wait_duration_ms", 0);
         let metrics = Metrics::global();
         if let Some(metrics) = metrics.as_ref() {
             let reason = ctx
@@ -268,18 +279,23 @@ impl ResumeStrategy for SameSessionStrategy {
                 metrics.record_resume_completed(start.elapsed(), false, Some("retry_exceeded"));
                 metrics.set_retry_attempts(0);
             }
-            return Ok(ResumeOutcome::failure(
+            let outcome = ResumeOutcome::failure(
                 format!("Retry limit exceeded after {} attempts", ctx.attempt_number),
                 false,
-            ));
+            );
+            span.record("outcome", outcome.label());
+            return Ok(outcome);
         }
 
         let wait_duration = self.wait_duration(ctx);
+        span.record("wait_duration_ms", wait_duration.as_millis() as i64);
         if !self.wait_or_cancel(wait_duration).await {
             if let Some(metrics) = metrics.as_ref() {
                 metrics.set_retry_attempts(0);
             }
-            return Ok(ResumeOutcome::skipped("same-session resume cancelled"));
+            let outcome = ResumeOutcome::skipped("same-session resume cancelled");
+            span.record("outcome", outcome.label());
+            return Ok(outcome);
         }
         if let Some(metrics) = metrics.as_ref() {
             metrics.record_wait(wait_duration);
@@ -287,7 +303,11 @@ impl ResumeStrategy for SameSessionStrategy {
 
         match self.trigger.trigger(ctx).await {
             Ok(()) => {
-                self.update_state_on_resume(ctx, wait_duration, metrics.as_deref())?;
+                if let Err(err) = self.update_state_on_resume(ctx, wait_duration, metrics.as_deref())
+                {
+                    span.record("outcome", "error");
+                    return Err(err);
+                }
                 if let Some(logger) = &audit_logger {
                     let _ = logger.log_resume_completed(
                         &ctx.session_path,
@@ -298,10 +318,12 @@ impl ResumeStrategy for SameSessionStrategy {
                     metrics.record_resume_completed(start.elapsed(), true, None);
                     metrics.set_retry_attempts(0);
                 }
-                Ok(ResumeOutcome::success(
+                let outcome = ResumeOutcome::success(
                     ctx.session_path.clone(),
                     "Resumed same session after rate limit",
-                ))
+                );
+                span.record("outcome", outcome.label());
+                Ok(outcome)
             }
             Err(err) => {
                 warn!(error = %err, "Resume trigger failed");
@@ -317,12 +339,16 @@ impl ResumeStrategy for SameSessionStrategy {
                 }
                 if retryable {
                     let next_delay = self.backoff_delay(ctx.attempt_number + 1);
-                    Ok(ResumeOutcome::delayed(
+                    let outcome = ResumeOutcome::delayed(
                         next_delay,
                         format!("Resume failed, will retry: {err}"),
-                    ))
+                    );
+                    span.record("outcome", outcome.label());
+                    Ok(outcome)
                 } else {
-                    Ok(ResumeOutcome::failure(err.to_string(), false))
+                    let outcome = ResumeOutcome::failure(err.to_string(), false);
+                    span.record("outcome", outcome.label());
+                    Ok(outcome)
                 }
             }
         }

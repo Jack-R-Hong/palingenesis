@@ -6,7 +6,7 @@ use palingenesis::monitor::events::{MonitorEvent, WatchEvent};
 use palingenesis::monitor::process::{ProcessEvent, ProcessInfo};
 use tempfile::tempdir;
 use tokio::sync::mpsc;
-use tokio::time::{sleep, timeout, Duration};
+use tokio::time::{Duration, sleep, timeout};
 use tokio_util::sync::CancellationToken;
 
 fn write_session(path: &Path) {
@@ -107,7 +107,10 @@ async fn emits_session_stopped_after_process_stop() {
     let (reason, session) = timeout(Duration::from_millis(200), async {
         loop {
             let event = event_rx.recv().await.expect("event value");
-            if let MonitorEvent::SessionStopped { reason, session, .. } = event {
+            if let MonitorEvent::SessionStopped {
+                reason, session, ..
+            } = event
+            {
                 return (reason, session);
             }
         }

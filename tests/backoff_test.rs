@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use rand::rngs::StdRng;
 use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 use palingenesis::resume::{Backoff, BackoffConfig, BackoffError};
 

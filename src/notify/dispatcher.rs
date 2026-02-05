@@ -96,10 +96,7 @@ struct ChannelOutcome {
     result: Result<(), NotifyError>,
 }
 
-async fn send_one(
-    channel: &dyn NotificationChannel,
-    event: &NotificationEvent,
-) -> ChannelOutcome {
+async fn send_one(channel: &dyn NotificationChannel, event: &NotificationEvent) -> ChannelOutcome {
     let name = channel.name();
     let result = channel.send(event).await;
     ChannelOutcome { name, result }

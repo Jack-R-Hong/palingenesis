@@ -1,13 +1,10 @@
 use palingenesis::resume::{BackupConfig, SessionBackup};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 fn assert_timestamp_format(name: &str) {
     let parts: Vec<&str> = name.split("-backup-").collect();
     assert_eq!(parts.len(), 2);
-    let timestamp_part = parts[1]
-        .split('.')
-        .next()
-        .expect("timestamp part");
+    let timestamp_part = parts[1].split('.').next().expect("timestamp part");
     assert_eq!(timestamp_part.len(), 15);
     let (date, time) = timestamp_part.split_at(8);
     assert!(date.chars().all(|c| c.is_ascii_digit()));
@@ -25,10 +22,7 @@ async fn backup_creates_copy_in_same_directory() {
         .expect("session write");
 
     let backupper = SessionBackup::default();
-    let backup_path = backupper
-        .create_backup(&session)
-        .await
-        .expect("backup");
+    let backup_path = backupper.create_backup(&session).await.expect("backup");
 
     assert_eq!(backup_path.parent(), session.parent());
     let filename = backup_path
@@ -80,7 +74,9 @@ async fn concurrent_backups_succeed_for_multiple_sessions() {
     let temp = tempfile::tempdir().expect("tempdir");
     let session_a = temp.path().join("session-a.md");
     let session_b = temp.path().join("session-b.md");
-    tokio::fs::write(&session_a, "alpha").await.expect("write a");
+    tokio::fs::write(&session_a, "alpha")
+        .await
+        .expect("write a");
     tokio::fs::write(&session_b, "beta").await.expect("write b");
 
     let backupper = SessionBackup::default();

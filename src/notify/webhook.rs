@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use reqwest::header::{HeaderName, HeaderValue};
 use reqwest::Client;
+use reqwest::header::{HeaderName, HeaderValue};
 use tokio::time::sleep;
 use tracing::{debug, warn};
 
@@ -125,10 +125,7 @@ fn apply_headers(
     request
 }
 
-async fn send_once(
-    channel: &WebhookChannel,
-    event: &NotificationEvent,
-) -> Result<(), String> {
+async fn send_once(channel: &WebhookChannel, event: &NotificationEvent) -> Result<(), String> {
     let request = channel.client.post(&channel.url).json(event);
     let request = apply_headers(request, channel.headers.as_ref());
 

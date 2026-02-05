@@ -1,9 +1,9 @@
 //! Daemon orchestration module.
 
+pub mod core;
 pub mod pid;
 pub mod shutdown;
 pub mod signals;
-pub mod core;
 pub mod state;
 
 pub use core::Daemon;

@@ -1,5 +1,5 @@
 #[cfg(unix)]
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
@@ -75,12 +75,12 @@ pub async fn listen_for_signals(tx: mpsc::Sender<DaemonSignal>, cancel: Cancella
 mod tests {
     use super::*;
     #[cfg(unix)]
-    use nix::sys::signal::{kill, Signal};
+    use nix::sys::signal::{Signal, kill};
     #[cfg(unix)]
     use nix::unistd::Pid;
     use tokio::sync::mpsc;
     #[cfg(unix)]
-    use tokio::time::{sleep, timeout, Duration};
+    use tokio::time::{Duration, sleep, timeout};
 
     #[tokio::test]
     async fn test_listen_for_signals_with_cancel() {

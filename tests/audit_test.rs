@@ -5,10 +5,11 @@ use async_trait::async_trait;
 use chrono::{Duration as ChronoDuration, Utc};
 
 use palingenesis::monitor::classifier::{RateLimitInfo, RetryAfterSource, StopReason};
-use palingenesis::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, ResumeTrigger, SameSessionConfig, SameSessionStrategy};
-use palingenesis::state::{
-    AuditConfig, AuditEntry, AuditEventType, AuditLogger, AuditOutcome,
+use palingenesis::resume::{
+    ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, ResumeTrigger, SameSessionConfig,
+    SameSessionStrategy,
 };
+use palingenesis::state::{AuditConfig, AuditEntry, AuditEventType, AuditLogger, AuditOutcome};
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
@@ -89,8 +90,8 @@ fn audit_rotates_when_size_exceeded() {
         file_mode: 0o600,
     });
 
-    let entry = AuditEntry::new(AuditEventType::ResumeStarted, "Start")
-        .with_outcome(AuditOutcome::Pending);
+    let entry =
+        AuditEntry::new(AuditEventType::ResumeStarted, "Start").with_outcome(AuditOutcome::Pending);
     logger.log(&entry).expect("log first entry");
     logger.log(&entry).expect("log second entry");
 
@@ -170,8 +171,8 @@ fn audit_query_skips_corrupted_entries() {
 
     std::fs::write(&audit_path, "{not json}\n").expect("write corrupted line");
 
-    let entry = AuditEntry::new(AuditEventType::ResumeStarted, "Start")
-        .with_outcome(AuditOutcome::Pending);
+    let entry =
+        AuditEntry::new(AuditEventType::ResumeStarted, "Start").with_outcome(AuditOutcome::Pending);
     logger.log(&entry).expect("log entry");
 
     let results = logger.query().execute().expect("query results");
@@ -193,8 +194,8 @@ fn audit_file_created_with_secure_permissions() {
         file_mode: 0o600,
     });
 
-    let entry = AuditEntry::new(AuditEventType::ResumeStarted, "Start")
-        .with_outcome(AuditOutcome::Pending);
+    let entry =
+        AuditEntry::new(AuditEventType::ResumeStarted, "Start").with_outcome(AuditOutcome::Pending);
     logger.log(&entry).expect("log entry");
 
     let metadata = std::fs::metadata(&audit_path).expect("metadata");

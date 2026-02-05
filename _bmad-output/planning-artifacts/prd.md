@@ -31,18 +31,20 @@ classification:
 **palingenesis** (Greek: "rebirth") — Agent resurrection system for continuous AI workflow execution
 
 ### Core Concept
-A lightweight Rust daemon that monitors Sisyphus/opencode agent sessions and automatically resumes work when the agent stops due to rate limits, context limits, or other interruptions.
+A lightweight Rust daemon that monitors OpenCode process and sessions, automatically restarting OpenCode (`opencode serve`) when it crashes and resuming work when the agent stops due to rate limits, context limits, or other interruptions.
 
 ### Key Capabilities (Discovered)
 
-1. **Monitors** opencode/Sisyphus sessions for stop signals
-2. **Classifies** stop reason (rate limit vs context exhaustion vs completion)
-3. **Waits** intelligently (respects `Retry-After`, polls quota endpoints)
-4. **Resumes** work automatically (same session or new session from `Next-step.md`)
-5. **Minimizes tokens** via step-file architecture
-6. **Observes** via OpenTelemetry (traces, metrics, logs)
-7. **Notifies** via external channels (webhook, Slack, Discord, Telegram, ntfy)
-8. **Controlled** via external channels (pause/resume/skip/abort/status/config)
+1. **Monitors** OpenCode process and sessions for stop signals
+2. **Restarts** OpenCode automatically via `opencode serve` when process dies
+3. **Classifies** stop reason (rate limit vs context exhaustion vs completion vs crash)
+4. **Waits** intelligently (respects `Retry-After`, polls quota endpoints)
+5. **Resumes** work automatically via OpenCode HTTP API (same session or new session)
+6. **Minimizes tokens** via step-file architecture
+7. **Observes** via OpenTelemetry (traces, metrics, logs)
+8. **Notifies** via external channels (webhook, Slack, Discord, Telegram, ntfy)
+9. **Controlled** via external channels (pause/resume/skip/abort/status/config)
+10. **MCP Server** interface — supports OpenCode MCP protocol for AI agent control
 
 ### Stop Reasons Identified
 
@@ -50,6 +52,7 @@ A lightweight Rust daemon that monitors Sisyphus/opencode agent sessions and aut
 |-------------|-----------|--------|
 | Rate limits (API quotas) | HIGH | Wait for quota refresh, then resume same session |
 | Context window exhausted | MEDIUM | Start new session from Next-step.md |
+| **OpenCode process crash** | MEDIUM | Restart via `opencode serve`, then resume session |
 | Session timeout | LOW | Resume same session |
 | Network/infra issues | LOW | Retry with backoff |
 | User exit | N/A | Respect, don't auto-resume |
@@ -188,6 +191,8 @@ A lightweight Rust daemon that monitors Sisyphus/opencode agent sessions and aut
 | ntfy.sh integration | Lightweight push notifications | P1 |
 | Config file | TOML/YAML configuration | P1 |
 | Multi-assistant support | Cursor, Copilot, etc. | P1 |
+| MCP Server interface | Daemon exposes MCP tools via stdio transport | P1 |
+| OpenCode integration | Support `type: "local"` MCP configuration | P1 |
 
 ### Vision (Future)
 
@@ -413,7 +418,9 @@ palingenesis
 ├── events [--since TIME] [--filter TYPE]
 ├── inspect [--json]
 ├── attach              # Live event stream
-└── metrics export [--format prometheus|json]
+├── metrics export [--format prometheus|json]
+└── mcp
+    └── serve           # Start MCP server mode (stdio transport)
 ```
 
 ### Output Formats
@@ -433,6 +440,13 @@ palingenesis
 [daemon]
 check_interval = "5s"
 log_level = "info"               # debug, info, warn, error
+
+[opencode]
+auto_restart = true              # Restart OpenCode if it crashes
+serve_port = 4096                # Port for `opencode serve`
+serve_hostname = "127.0.0.1"     # Hostname for `opencode serve`
+restart_delay_ms = 1000          # Delay before restart
+health_check_interval = "5s"     # How often to check OpenCode health
 
 [monitoring]
 assistants = ["claude-code"]     # Auto-detect if empty
@@ -546,6 +560,20 @@ palingenesis metrics export --format prometheus >> /var/lib/prometheus/palingene
 - FR38: User can view metrics dashboard in Grafana
 - FR39: Daemon can calculate and report "time saved" metric
 - FR40: Daemon can calculate and report "saves count" metric
+
+### MCP Server Interface (Growth)
+
+- FR41: Daemon supports MCP stdio transport interface
+- FR42: MCP interface uses JSON-RPC 2.0 protocol
+- FR43: Daemon exposes control functions as MCP tools (status, pause, resume, new-session, logs)
+- FR44: Supports OpenCode `type: "local"` MCP configuration format
+
+### OpenCode Process Management (Growth)
+
+- FR45: Daemon detects OpenCode process crash/exit
+- FR46: Daemon automatically restarts OpenCode via `opencode serve`
+- FR47: Daemon manages sessions via OpenCode HTTP API (`/session/*` endpoints)
+- FR48: User can configure OpenCode serve port/hostname via config file
 
 ---
 

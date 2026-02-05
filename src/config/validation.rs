@@ -164,15 +164,36 @@ pub fn validate_config(config: &Config) -> ValidationResult {
     }
 
     if let Some(ref otel) = config.otel {
-        if let Some(ref endpoint) = otel.endpoint {
-            if !is_http_url(endpoint) {
-                errors.push(ValidationError {
-                    field: "otel.endpoint".to_string(),
-                    message: "OpenTelemetry endpoint must start with http:// or https://"
-                        .to_string(),
-                    suggestion: None,
-                });
-            }
+        let endpoint = otel.endpoint.trim();
+        if endpoint.is_empty() {
+            errors.push(ValidationError {
+                field: "otel.endpoint".to_string(),
+                message: "OpenTelemetry endpoint cannot be empty".to_string(),
+                suggestion: None,
+            });
+        } else if !is_http_url(endpoint) {
+            errors.push(ValidationError {
+                field: "otel.endpoint".to_string(),
+                message: "OpenTelemetry endpoint must start with http:// or https://".to_string(),
+                suggestion: None,
+            });
+        }
+
+        let protocol = otel.protocol.trim().to_ascii_lowercase();
+        if protocol != "grpc" && protocol != "http" {
+            errors.push(ValidationError {
+                field: "otel.protocol".to_string(),
+                message: "OpenTelemetry protocol must be http or grpc".to_string(),
+                suggestion: Some("Set protocol to http or grpc".to_string()),
+            });
+        }
+
+        if !(0.0..=1.0).contains(&otel.sampling_ratio) {
+            errors.push(ValidationError {
+                field: "otel.sampling_ratio".to_string(),
+                message: "OpenTelemetry sampling_ratio must be between 0.0 and 1.0".to_string(),
+                suggestion: Some("Set sampling_ratio between 0.0 and 1.0".to_string()),
+            });
         }
     }
 
@@ -441,5 +462,28 @@ mod tests {
             .errors
             .iter()
             .any(|err| err.field == "metrics.manual_restart_time_seconds"));
+    }
+
+    #[test]
+    fn test_validate_config_reports_invalid_otel_protocol() {
+        let mut config = Config::default();
+        let mut otel = crate::config::schema::OtelConfig::default();
+        otel.protocol = "smtp".to_string();
+        config.otel = Some(otel);
+        let result = validate_config(&config);
+        assert!(result.errors.iter().any(|err| err.field == "otel.protocol"));
+    }
+
+    #[test]
+    fn test_validate_config_reports_invalid_otel_sampling_ratio() {
+        let mut config = Config::default();
+        let mut otel = crate::config::schema::OtelConfig::default();
+        otel.sampling_ratio = 1.5;
+        config.otel = Some(otel);
+        let result = validate_config(&config);
+        assert!(result
+            .errors
+            .iter()
+            .any(|err| err.field == "otel.sampling_ratio"));
     }
 }

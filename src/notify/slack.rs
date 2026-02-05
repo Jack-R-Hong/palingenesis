@@ -44,7 +44,11 @@ impl NotificationChannel for SlackChannel {
 
     async fn send(&self, event: &NotificationEvent) -> Result<(), NotifyError> {
         let message = format_event_message(event);
-        let title = format!("{} {}", severity_emoji(event.severity()), event_title(event));
+        let title = format!(
+            "{} {}",
+            severity_emoji(event.severity()),
+            event_title(event)
+        );
         let payload = SlackWebhookPayload {
             blocks: vec![
                 SlackBlock::Header {

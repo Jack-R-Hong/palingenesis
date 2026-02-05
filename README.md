@@ -57,7 +57,7 @@ Configuration file location:
 ```bash
 # Initialize config
 palingenesis config init
-
+M
 # Validate config
 palingenesis config validate
 ```

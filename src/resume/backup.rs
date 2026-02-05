@@ -105,7 +105,9 @@ impl SessionBackup {
     }
 
     fn generate_backup_path(&self, session_path: &Path) -> PathBuf {
-        let timestamp = Local::now().format(&self.config.timestamp_format).to_string();
+        let timestamp = Local::now()
+            .format(&self.config.timestamp_format)
+            .to_string();
         let stem = session_path
             .file_stem()
             .and_then(|s| s.to_str())
@@ -218,23 +220,24 @@ impl SessionBackup {
             });
         }
 
-        let timestamp_part = parts[1].split('.').next().ok_or_else(|| {
-            BackupError::InvalidBackupFilename {
-                filename: filename.to_string(),
-            }
-        })?;
+        let timestamp_part =
+            parts[1]
+                .split('.')
+                .next()
+                .ok_or_else(|| BackupError::InvalidBackupFilename {
+                    filename: filename.to_string(),
+                })?;
 
         let naive = NaiveDateTime::parse_from_str(timestamp_part, &self.config.timestamp_format)
             .map_err(|_| BackupError::InvalidBackupFilename {
                 filename: filename.to_string(),
             })?;
 
-        Local
-            .from_local_datetime(&naive)
-            .single()
-            .ok_or_else(|| BackupError::InvalidBackupFilename {
+        Local.from_local_datetime(&naive).single().ok_or_else(|| {
+            BackupError::InvalidBackupFilename {
                 filename: filename.to_string(),
-            })
+            }
+        })
     }
 }
 
@@ -262,7 +265,9 @@ mod tests {
         let backup = temp.path().join("session-backup-20260205-143022.md");
 
         fs::write(&source, b"hello").await.expect("source write");
-        fs::write(&backup, b"hello world").await.expect("backup write");
+        fs::write(&backup, b"hello world")
+            .await
+            .expect("backup write");
 
         let backupper = SessionBackup::default();
         let err = backupper
@@ -277,18 +282,14 @@ mod tests {
     async fn prune_removes_oldest_backups() {
         let temp = tempfile::tempdir().expect("tempdir");
         let session = temp.path().join("session.md");
-        fs::write(&session, b"session").await.expect("session write");
+        fs::write(&session, b"session")
+            .await
+            .expect("session write");
 
-        let timestamps = [
-            "20240101-000000",
-            "20240102-000000",
-            "20240103-000000",
-        ];
+        let timestamps = ["20240101-000000", "20240102-000000", "20240103-000000"];
 
         for ts in timestamps {
-            let backup = temp
-                .path()
-                .join(format!("session-backup-{}.md", ts));
+            let backup = temp.path().join(format!("session-backup-{}.md", ts));
             fs::write(&backup, b"backup").await.expect("backup write");
         }
 
@@ -303,14 +304,17 @@ mod tests {
             .expect("prune backups");
 
         assert_eq!(removed, 1);
-        assert!(!temp
-            .path()
-            .join("session-backup-20240101-000000.md")
-            .exists());
-        assert!(temp
-            .path()
-            .join("session-backup-20240102-000000.md")
-            .exists());
+        assert!(
+            !temp
+                .path()
+                .join("session-backup-20240101-000000.md")
+                .exists()
+        );
+        assert!(
+            temp.path()
+                .join("session-backup-20240102-000000.md")
+                .exists()
+        );
     }
 
     #[test]
@@ -319,7 +323,10 @@ mod tests {
         let timestamp = backupper
             .extract_timestamp("session-backup-20260205-143022.md")
             .expect("timestamp parse");
-        assert_eq!(timestamp.format("%Y%m%d-%H%M%S").to_string(), "20260205-143022");
+        assert_eq!(
+            timestamp.format("%Y%m%d-%H%M%S").to_string(),
+            "20260205-143022"
+        );
     }
 
     #[cfg(unix)]
@@ -330,7 +337,9 @@ mod tests {
 
         let temp = tempfile::tempdir().expect("tempdir");
         let session = temp.path().join("session.md");
-        fs::write(&session, b"session").await.expect("session write");
+        fs::write(&session, b"session")
+            .await
+            .expect("session write");
 
         let permissions = Permissions::from_mode(0o500);
         std::fs::set_permissions(temp.path(), permissions).expect("set permissions");

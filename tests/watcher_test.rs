@@ -10,7 +10,10 @@ async fn recv_event(
     receiver: &mut tokio::sync::mpsc::Receiver<WatchEvent>,
     timeout_duration: Duration,
 ) -> Option<WatchEvent> {
-    timeout(timeout_duration, receiver.recv()).await.ok().flatten()
+    timeout(timeout_duration, receiver.recv())
+        .await
+        .ok()
+        .flatten()
 }
 
 #[tokio::test]

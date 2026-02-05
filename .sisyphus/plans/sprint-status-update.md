@@ -1,0 +1,222 @@
+# Sprint Status Update Plan
+
+## TL;DR
+
+> **Quick Summary**: Update sprint-status.yaml to include missing Epic 8 (MCP Server Interface) and Epic 9 (OpenCode Process Management) with their stories.
+> 
+> **Deliverables**:
+> - Updated `_bmad-output/implementation-artifacts/sprint-status.yaml`
+> 
+> **Estimated Effort**: Quick
+> **Parallel Execution**: NO - single file update
+
+---
+
+## Context
+
+### Original Request
+User invoked Sprint Planning workflow via SM agent Bob. Analysis revealed that Epic 8 and Epic 9 exist in `epics.md` but are missing from the sprint status tracking file.
+
+### Discovery Findings
+- **Epics file**: `_bmad-output/planning-artifacts/epics.md` (9 epics, 63 stories)
+- **Current sprint-status.yaml**: Only tracks Epics 1-7
+- **Missing**: Epic 8 (4 stories), Epic 9 (4 stories)
+
+---
+
+## Work Objectives
+
+### Core Objective
+Add Epic 8 and Epic 9 to sprint-status.yaml to enable complete project tracking.
+
+### Concrete Deliverables
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` - updated with all 9 epics
+
+### Definition of Done
+- [x] Epic 8 with stories 8.1-8.4 appears in sprint-status.yaml
+- [x] Epic 9 with stories 9.1-9.4 appears in sprint-status.yaml
+- [x] All new items have status `backlog`
+- [x] File is valid YAML
+
+---
+
+## TODOs
+
+- [x] 1. Update sprint-status.yaml
+
+  **What to do**:
+  Replace the entire content of `_bmad-output/implementation-artifacts/sprint-status.yaml` with the following:
+
+  ```yaml
+  # Sprint Status - palingenesis
+  # generated: 2026-02-06
+  # project: palingenesis
+  # project_key: NOKEY
+  # tracking_system: file-system
+  # story_location: _bmad-output/implementation-artifacts
+
+  # STATUS DEFINITIONS:
+  # ==================
+  # Epic Status:
+  #   - backlog: Epic not yet started
+  #   - in-progress: Epic actively being worked on
+  #   - done: All stories in epic completed
+  #
+  # Epic Status Transitions:
+  #   - backlog → in-progress: Automatically when first story is created (via create-story)
+  #   - in-progress → done: Manually when all stories reach 'done' status
+  #
+  # Story Status:
+  #   - backlog: Story only exists in epic file
+  #   - ready-for-dev: Story file created in stories folder
+  #   - in-progress: Developer actively working on implementation
+  #   - review: Ready for code review (via Dev's code-review workflow)
+  #   - done: Story completed
+  #
+  # Retrospective Status:
+  #   - optional: Can be completed but not required
+  #   - done: Retrospective has been completed
+  #
+  # WORKFLOW NOTES:
+  # ===============
+  # - Epic transitions to 'in-progress' automatically when first story is created
+  # - Stories can be worked in parallel if team capacity allows
+  # - SM typically creates next story after previous one is 'done' to incorporate learnings
+  # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+  generated: 2026-02-06
+  project: palingenesis
+  project_key: NOKEY
+  tracking_system: file-system
+  story_location: _bmad-output/implementation-artifacts
+
+  development_status:
+    # Epic 1: Installable CLI with Daemon Lifecycle (MVP)
+    epic-1: done
+    1-1-project-initialization-from-starter-template: done
+    1-2-cli-framework-with-clap-subcommands: done
+    1-3-platform-specific-path-resolution: done
+    1-4-state-persistence-layer: done
+    1-5-pid-file-management: done
+    1-6-unix-socket-ipc-server: done
+    1-7-unix-socket-ipc-client: done
+    1-8-daemon-start-command: done
+    1-9-daemon-stop-command: done
+    1-10-daemon-status-command: done
+    1-11-daemon-logs-command: done
+    1-12-tracing-and-structured-logging-setup: done
+    1-13-graceful-shutdown-coordination: done
+    epic-1-retrospective: done
+
+    # Epic 2: Session Detection & Classification (MVP)
+    epic-2: done
+    2-1-file-system-watcher-setup: done
+    2-2-session-file-parser-frontmatter-extraction: done
+    2-3-process-detection-opencode-start-stop: done
+    2-4-stop-reason-classification-rate-limit: done
+    2-5-stop-reason-classification-context-exhaustion: done
+    2-6-stop-reason-classification-user-exit: done
+    2-7-monitor-event-channel: done
+    epic-2-retrospective: done
+
+    # Epic 3: Automatic Session Resumption (MVP)
+    epic-3: done
+    3-1-resume-strategy-trait: done
+    3-2-same-session-resume-strategy: done
+    3-3-new-session-resume-strategy: done
+    3-4-session-backup-before-new-session: done
+    3-5-exponential-backoff-implementation: done
+    3-6-audit-trail-logging: done
+    3-7-pause-command-implementation: done
+    3-8-resume-command-implementation: done
+    3-9-force-new-session-command: done
+    epic-3-retrospective: done
+
+    # Epic 4: Configuration Management (MVP)
+    epic-4: done
+    4-1-config-schema-definition: done
+    4-2-config-init-command: done
+    4-3-config-show-command: done
+    4-4-config-validate-command: done
+    4-5-config-edit-command: done
+    4-6-hot-reload-via-sighup: done
+    4-7-auto-detect-ai-assistants: done
+    epic-4-retrospective: done
+
+    # Epic 5: Event Notifications (Growth)
+    epic-5: done
+    5-1-notification-dispatcher: done
+    5-2-webhook-notifications: done
+    5-3-ntfy-sh-integration: done
+    5-4-discord-webhook-integration: done
+    5-5-slack-webhook-integration: done
+    5-6-notification-events-definition: done
+    epic-5-retrospective: optional
+
+    # Epic 6: Remote Control & External API (Growth)
+    epic-6: done
+    6-1-http-api-server-setup: done
+    6-2-health-endpoint: done
+    6-3-status-api-endpoint: done
+    6-4-control-api-endpoints: done
+    6-5-events-sse-stream: done
+    6-6-discord-slack-bot-commands: done
+    epic-6-retrospective: done
+
+    # Epic 7: Observability & Metrics (Growth)
+    epic-7: in-progress
+    7-1-prometheus-metrics-endpoint: done
+    7-2-core-metrics-implementation: done
+    7-3-time-saved-metric: done
+    7-4-saves-count-metric: done
+    7-5-otel-traces-export: ready-for-dev
+    7-6-otel-logs-export: backlog
+    7-7-grafana-dashboard-template: backlog
+    epic-7-retrospective: optional
+
+    # Epic 8: MCP Server Interface (Growth)
+    epic-8: backlog
+    8-1-mcp-server-stdio-transport-setup: backlog
+    8-2-json-rpc-2-0-protocol-implementation: backlog
+    8-3-mcp-tool-definitions: backlog
+    8-4-opencode-local-mcp-configuration-support: backlog
+    epic-8-retrospective: optional
+
+    # Epic 9: OpenCode Process Management (Growth)
+    epic-9: backlog
+    9-1-opencode-process-detection: backlog
+    9-2-automatic-opencode-restart: backlog
+    9-3-opencode-http-api-client: backlog
+    9-4-opencode-configuration-options: backlog
+    epic-9-retrospective: optional
+  ```
+
+  **Recommended Agent Profile**:
+  - **Category**: `quick`
+  - **Skills**: `[]` (no special skills needed)
+
+  **Acceptance Criteria**:
+  - [x] File saved to `_bmad-output/implementation-artifacts/sprint-status.yaml`
+  - [x] YAML is valid (can be parsed without errors)
+  - [x] Contains all 9 epics
+  - [x] Contains all 63 stories
+
+---
+
+## Success Criteria
+
+### Verification Commands
+```bash
+# Check file exists and is valid YAML
+python3 -c "import yaml; yaml.safe_load(open('_bmad-output/implementation-artifacts/sprint-status.yaml'))"
+
+# Count epics
+grep -c "^  epic-[0-9]:" _bmad-output/implementation-artifacts/sprint-status.yaml
+# Expected: 9
+```
+
+### Final Checklist
+- [x] Epic 8 (MCP Server Interface) added with 4 stories
+- [x] Epic 9 (OpenCode Process Management) added with 4 stories
+- [x] All existing statuses preserved (no downgrades)
+- [x] File is valid YAML

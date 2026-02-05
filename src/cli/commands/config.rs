@@ -237,6 +237,8 @@ enabled = false
 # enabled = false
 # endpoint = "http://localhost:4317"
 # service_name = "palingenesis"
+# protocol = "http"  # http or grpc
+# sampling_ratio = 1.0
 # traces = true
 # metrics = true
 # metrics_enabled = true
@@ -564,7 +566,7 @@ fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, Strin
     if let Ok(endpoint) = env::var("PALINGENESIS_OTEL_ENDPOINT") {
         otel_config = Some(otel_config.unwrap_or_default());
         if let Some(ref mut otel) = otel_config {
-            otel.endpoint = Some(endpoint.clone());
+            otel.endpoint = endpoint.clone();
         }
         overrides.push(("PALINGENESIS_OTEL_ENDPOINT".to_string(), endpoint));
         otel_override = true;
@@ -612,6 +614,27 @@ fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, Strin
             otel.metrics_enabled = parsed;
         }
         overrides.push(("PALINGENESIS_OTEL_METRICS_ENABLED".to_string(), value));
+        otel_override = true;
+    }
+
+    if let Ok(protocol) = env::var("PALINGENESIS_OTEL_PROTOCOL") {
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.protocol = protocol.clone();
+        }
+        overrides.push(("PALINGENESIS_OTEL_PROTOCOL".to_string(), protocol));
+        otel_override = true;
+    }
+
+    if let Ok(value) = env::var("PALINGENESIS_OTEL_SAMPLING_RATIO") {
+        let parsed = value
+            .parse::<f64>()
+            .context("PALINGENESIS_OTEL_SAMPLING_RATIO must be a float")?;
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.sampling_ratio = parsed;
+        }
+        overrides.push(("PALINGENESIS_OTEL_SAMPLING_RATIO".to_string(), value));
         otel_override = true;
     }
 

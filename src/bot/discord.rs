@@ -1,11 +1,11 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
+use axum::Json;
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
-use axum::Json;
 use ed25519_dalek::{Signature, VerifyingKey};
 use serde::Deserialize;
 
@@ -27,12 +27,18 @@ pub async fn discord_webhook_handler(
     body: Bytes,
 ) -> impl IntoResponse {
     let Some(config) = state.daemon_state().bot_config() else {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(json_message("Bot config unavailable")))
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json_message("Bot config unavailable")),
+        )
             .into_response();
     };
 
     if !config.enabled {
-        return (StatusCode::FORBIDDEN, Json(json_message("Bot commands disabled")))
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json_message("Bot commands disabled")),
+        )
             .into_response();
     }
 
@@ -44,7 +50,10 @@ pub async fn discord_webhook_handler(
     let interaction: DiscordInteraction = match serde_json::from_slice(&body) {
         Ok(payload) => payload,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(json_message("Invalid payload")))
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json_message("Invalid payload")),
+            )
                 .into_response();
         }
     };
@@ -54,23 +63,24 @@ pub async fn discord_webhook_handler(
     }
 
     if interaction.interaction_type != DISCORD_COMMAND {
-        return (StatusCode::BAD_REQUEST, Json(json_message("Unsupported interaction")))
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json_message("Unsupported interaction")),
+        )
             .into_response();
     }
 
     let user_id = match interaction.user_id() {
         Some(user_id) => user_id,
         None => {
-            return (StatusCode::BAD_REQUEST, Json(json_message("Missing user")))
-                .into_response();
+            return (StatusCode::BAD_REQUEST, Json(json_message("Missing user"))).into_response();
         }
     };
 
     let auth = BotAuth::for_platform(&config, BotPlatform::Discord);
     if !auth.is_authorized(&user_id) {
-        let result = BotCommandResult::error(
-            "Unauthorized: You don't have permission to use this command.",
-        );
+        let result =
+            BotCommandResult::error("Unauthorized: You don't have permission to use this command.");
         let response = result.to_discord_response();
         return (StatusCode::OK, Json(response)).into_response();
     }
@@ -126,13 +136,8 @@ fn verify_discord_signature(
         .map_err(|_| "Signature verification failed")
 }
 
-fn parse_discord_command(
-    interaction: &DiscordInteraction,
-) -> Result<BotCommand, &'static str> {
-    let data = interaction
-        .data
-        .as_ref()
-        .ok_or("Missing command data")?;
+fn parse_discord_command(interaction: &DiscordInteraction) -> Result<BotCommand, &'static str> {
+    let data = interaction.data.as_ref().ok_or("Missing command data")?;
 
     if data.name != "palin" {
         return Err("Unknown command");

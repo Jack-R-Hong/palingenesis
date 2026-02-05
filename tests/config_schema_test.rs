@@ -61,6 +61,8 @@ webhook_url = "https://hooks.slack.com/services/1"
 enabled = true
 endpoint = "http://localhost:4317"
 service_name = "palingenesis-test"
+protocol = "grpc"
+sampling_ratio = 0.25
 traces = false
 metrics = true
 "#;
@@ -122,8 +124,10 @@ metrics = true
         otel,
         OtelConfig {
             enabled: true,
-            endpoint: Some("http://localhost:4317".to_string()),
+            endpoint: "http://localhost:4317".to_string(),
             service_name: "palingenesis-test".to_string(),
+            protocol: "grpc".to_string(),
+            sampling_ratio: 0.25,
             traces: false,
             metrics: true,
             metrics_enabled: true,

@@ -40,7 +40,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ### Requirements Overview
 
-**Functional Requirements (40 total):**
+**Functional Requirements (48 total):**
 
 | Category | FRs | Description |
 |----------|-----|-------------|
@@ -51,6 +51,8 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 | Notifications | FR26-FR30 | Webhook, Discord, Slack, ntfy.sh integration |
 | External Control | FR31-FR34 | Remote commands via chat platforms |
 | Observability | FR35-FR40 | OTEL metrics, traces, logs, dashboards |
+| MCP Server | FR41-FR44 | MCP stdio interface, JSON-RPC 2.0, OpenCode integration |
+| OpenCode Management | FR45-FR48 | Process monitoring, auto-restart, HTTP API integration |
 
 **Non-Functional Requirements:**
 
@@ -150,6 +152,7 @@ cargo generate --git https://github.com/skanehira/rust-cli-template.git --name p
 | tower-http | 0.6.8 | HTTP middleware |
 | thiserror | 2.0.17 | Domain error types |
 | anyhow | 1.0.100 | Application error handling |
+| rmcp | 0.1+ | MCP protocol (JSON-RPC 2.0 over stdio) |
 
 ### Cargo.toml
 
@@ -498,6 +501,8 @@ info!(session_path = %path, steps_completed = steps.len(), "Session loaded");
 | Notifications (FR26-FR30) | `src/notify/` | `webhook.rs`, `ntfy.rs`, `dispatcher.rs` |
 | External Control (FR31-FR34) | `src/http/` | `handlers.rs`, `routes.rs` |
 | Observability (FR35-FR40) | `src/telemetry/` | `metrics.rs`, `traces.rs` |
+| MCP Server (FR41-FR44) | `src/mcp/` | `server.rs`, `tools.rs`, `handlers.rs` |
+| OpenCode Management (FR45-FR48) | `src/opencode/` | `process.rs`, `client.rs`, `session.rs` |
 
 ### Complete Project Directory Structure
 
@@ -577,6 +582,18 @@ palingenesis/
 │   │   ├── middleware.rs             # Tracing, auth middleware
 │   │   └── error.rs                  # AppError → Response
 │   │
+│   ├── mcp/
+│   │   ├── mod.rs                    # MCP module root
+│   │   ├── server.rs                 # stdio transport, JSON-RPC 2.0
+│   │   ├── tools.rs                  # MCP tool definitions
+│   │   └── handlers.rs               # Tool handlers → DaemonState
+│   │
+│   ├── opencode/
+│   │   ├── mod.rs                    # OpenCode integration root
+│   │   ├── process.rs                # Process monitoring & restart
+│   │   ├── client.rs                 # HTTP client for OpenCode API
+│   │   └── session.rs                # Session management via API
+│   │
 │   ├── ipc/
 │   │   ├── mod.rs                    # IPC module root
 │   │   ├── socket.rs                 # Unix socket server
@@ -629,6 +646,7 @@ graph TB
     subgraph "Communication Layer"
         IPC[ipc/socket.rs]
         HTTP[http/server.rs]
+        MCP[mcp/server.rs]
     end
     
     subgraph "Core Daemon"
@@ -642,18 +660,31 @@ graph TB
         Resume[resume/strategy.rs]
     end
     
+    subgraph "OpenCode Integration"
+        OCProcess[opencode/process.rs]
+        OCClient[opencode/client.rs]
+        OCServer[OpenCode Server]
+    end
+    
     subgraph "External"
         Notify[notify/dispatcher.rs]
         Telemetry[telemetry/otel.rs]
+        OpenCodeAgent[OpenCode AI Agent]
     end
     
     CLI --> IPC
     IPC --> Daemon
     HTTP --> Daemon
+    MCP --> Daemon
+    OpenCodeAgent --> MCP
     Daemon --> Monitor
     Daemon --> State
+    Daemon --> OCProcess
+    OCProcess -->|spawn/restart| OCServer
+    OCClient -->|HTTP API| OCServer
     Monitor --> Classifier
     Classifier --> Resume
+    Resume --> OCClient
     Resume --> State
     Resume --> Notify
     Daemon --> Telemetry
@@ -667,6 +698,7 @@ graph TB
 |------|-----|-----------|
 | CLI → Daemon | Unix socket (`ipc/`) | Request/response protocol |
 | HTTP → Daemon | Axum handlers | Shared `AppState` |
+| MCP → Daemon | stdio (`mcp/`) | JSON-RPC 2.0 protocol |
 | Monitor → Daemon | `tokio::sync::mpsc` | `MonitorEvent` channel |
 | Daemon → Notify | `tokio::sync::mpsc` | `NotificationEvent` channel |
 
@@ -675,6 +707,9 @@ graph TB
 | Integration | Module | Protocol |
 |-------------|--------|----------|
 | opencode session files | `monitor/session.rs` | File read (YAML frontmatter) |
+| OpenCode Server API | `opencode/client.rs` | HTTP (REST API on port 4096) |
+| OpenCode MCP client | `mcp/server.rs` | stdio + JSON-RPC 2.0 |
+| OpenCode process | `opencode/process.rs` | Process spawn (`opencode serve`) |
 | Webhook endpoints | `notify/webhook.rs` | HTTP POST |
 | ntfy.sh | `notify/ntfy.rs` | HTTP POST |
 | Prometheus | `http/handlers/metrics.rs` | HTTP GET (scrape) |
@@ -688,6 +723,7 @@ sequenceDiagram
     participant M as Monitor
     participant C as Classifier
     participant D as Daemon
+    participant OC as OpenCode
     participant R as Resume
     participant S as State
     participant N as Notify
@@ -695,7 +731,12 @@ sequenceDiagram
     FS->>M: File change event
     M->>C: Parse session
     C->>D: StopReason detected
+    alt OpenCode crashed
+        D->>OC: Restart via `opencode serve`
+        OC-->>D: Server ready
+    end
     D->>R: Execute strategy
+    R->>OC: Resume session via HTTP API
     R->>S: Update state
     R->>N: Send notification
     N-->>External: Webhook/ntfy
@@ -736,6 +777,8 @@ sequenceDiagram
 | FR26-FR30 (Notifications) | `notify/` | ✅ |
 | FR31-FR34 (External Control) | `http/` | ✅ |
 | FR35-FR40 (Observability) | `telemetry/` | ✅ |
+| FR41-FR44 (MCP Server) | `mcp/` | ✅ |
+| FR45-FR48 (OpenCode Management) | `opencode/` | ✅ |
 
 **NFR Coverage:**
 - <5s detection: inotify/FSEvents ✅

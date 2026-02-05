@@ -73,4 +73,13 @@ impl ResumeOutcome {
             } | Self::Delayed { .. }
         )
     }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Success { .. } => "success",
+            Self::Failure { .. } => "failure",
+            Self::Skipped { .. } => "skipped",
+            Self::Delayed { .. } => "delayed",
+        }
+    }
 }

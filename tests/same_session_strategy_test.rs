@@ -8,8 +8,8 @@ use async_trait::async_trait;
 use palingenesis::monitor::classifier::{RateLimitInfo, RetryAfterSource, StopReason};
 use palingenesis::monitor::session::{Session, SessionState, StepValue};
 use palingenesis::resume::{
-    ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, ResumeTrigger,
-    SameSessionConfig, SameSessionStrategy,
+    ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, ResumeTrigger, SameSessionConfig,
+    SameSessionStrategy,
 };
 use palingenesis::state::StateStore;
 
@@ -75,8 +75,8 @@ async fn same_session_uses_backoff_when_no_retry_after() {
     let mut ctx = ResumeContext::new(PathBuf::from("/tmp/session.md"), rate_limit_reason());
     ctx.attempt_number = 2;
 
-    let strategy = SameSessionStrategy::with_config(SameSessionConfig::default())
-        .with_trigger(trigger);
+    let strategy =
+        SameSessionStrategy::with_config(SameSessionConfig::default()).with_trigger(trigger);
     let handle = tokio::spawn(async move { strategy.execute(&ctx).await });
 
     tokio::time::advance(Duration::from_secs(59)).await;
@@ -106,7 +106,7 @@ async fn same_session_cancels_wait() {
     let handle = tokio::spawn(async move { strategy.execute(&ctx).await });
     cancel.cancel();
 
-    let outcome = handle.await.expect("task") .expect("outcome");
+    let outcome = handle.await.expect("task").expect("outcome");
     assert!(matches!(outcome, ResumeOutcome::Skipped { .. }));
     assert_eq!(calls.load(Ordering::SeqCst), 0);
 }

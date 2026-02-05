@@ -25,9 +25,7 @@ async fn main() -> anyhow::Result<()> {
             since,
         }) => commands::logs::handle_logs(follow, tail, since).await,
         Some(Commands::Config { action }) => match action {
-            ConfigAction::Init { force, path } => {
-                commands::config::handle_init(force, path).await
-            }
+            ConfigAction::Init { force, path } => commands::config::handle_init(force, path).await,
             ConfigAction::Show {
                 json,
                 section,

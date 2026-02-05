@@ -45,7 +45,10 @@ impl ShutdownCoordinator {
                 ShutdownResult::Graceful
             }
             Err(_) => {
-                let hung_tasks = handles.iter().filter(|handle| !handle.is_finished()).count();
+                let hung_tasks = handles
+                    .iter()
+                    .filter(|handle| !handle.is_finished())
+                    .count();
                 warn!(hung_tasks, "Shutdown timed out; aborting remaining tasks");
                 for handle in handles {
                     if !handle.is_finished() {
@@ -72,8 +75,8 @@ pub enum ShutdownResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[tokio::test]
     async fn test_shutdown_graceful_completes_work() {
@@ -109,9 +112,6 @@ mod tests {
         tokio::time::advance(SHUTDOWN_TIMEOUT + Duration::from_secs(1)).await;
 
         let result = shutdown_task.await.unwrap();
-        assert!(matches!(
-            result,
-            ShutdownResult::TimedOut { hung_tasks: 1 }
-        ));
+        assert!(matches!(result, ShutdownResult::TimedOut { hung_tasks: 1 }));
     }
 }

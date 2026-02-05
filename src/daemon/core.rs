@@ -4,11 +4,11 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 use tokio::time;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{error, info, info_span, warn, Instrument};
 
 use crate::daemon::pid::{PidError, PidFile};
 use crate::daemon::shutdown::{SHUTDOWN_TIMEOUT, ShutdownCoordinator, ShutdownResult};
-use crate::daemon::signals::{listen_for_signals, DaemonSignal};
+use crate::daemon::signals::{DaemonSignal, listen_for_signals};
 use crate::daemon::state::DaemonState;
 use crate::http::{EventBroadcaster, HttpServer};
 use crate::ipc::socket::{DaemonStateAccess, IpcError, IpcServer};
@@ -45,6 +45,8 @@ impl Daemon {
     }
 
     pub async fn run(&mut self) -> Result<(), DaemonError> {
+        let root_span = info_span!("daemon.run");
+        let _enter = root_span.enter();
         info!("Starting daemon");
         self.pid_file.acquire()?;
 
@@ -55,10 +57,13 @@ impl Daemon {
             return Err(err.into());
         }
 
-        if let Err(err) = self.event_broadcaster.send(NotificationEvent::DaemonStarted {
-            timestamp: Utc::now(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-        }) {
+        if let Err(err) = self
+            .event_broadcaster
+            .send(NotificationEvent::DaemonStarted {
+                timestamp: Utc::now(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+            })
+        {
             tracing::debug!(error = %err, "No SSE subscribers for daemon_started event (expected at startup)");
         }
 
@@ -66,35 +71,46 @@ impl Daemon {
 
         let (signal_tx, mut signal_rx) = mpsc::channel(4);
         let signal_cancel = cancel.clone();
-        self.shutdown
-            .register_task(tokio::spawn(async move {
+        let signal_span = info_span!("daemon.signals");
+        self.shutdown.register_task(tokio::spawn(
+            async move {
                 listen_for_signals(signal_tx, signal_cancel).await;
-            }));
+            }
+            .instrument(signal_span),
+        ));
 
         let signal_state = Arc::clone(&self.state);
         let signal_cancel = cancel.clone();
-        self.shutdown.register_task(tokio::spawn(async move {
-            while let Some(signal) = signal_rx.recv().await {
-                match signal {
-                    DaemonSignal::Shutdown => {
-                        signal_cancel.cancel();
-                        break;
-                    }
-                    DaemonSignal::Reload => {
-                        if let Err(err) = signal_state.reload_config() {
-                            error!(error = %err, "Failed to reload configuration");
+        let handler_span = info_span!("daemon.signal_handler");
+        self.shutdown.register_task(tokio::spawn(
+            async move {
+                while let Some(signal) = signal_rx.recv().await {
+                    match signal {
+                        DaemonSignal::Shutdown => {
+                            signal_cancel.cancel();
+                            break;
+                        }
+                        DaemonSignal::Reload => {
+                            if let Err(err) = signal_state.reload_config() {
+                                error!(error = %err, "Failed to reload configuration");
+                            }
                         }
                     }
                 }
             }
-        }));
+            .instrument(handler_span),
+        ));
 
         if self.state.auto_detect_active() {
             let detection_state = Arc::clone(&self.state);
             let detection_cancel = cancel.clone();
-            self.shutdown.register_task(tokio::spawn(async move {
-                run_auto_detection(detection_state, detection_cancel).await;
-            }));
+            let monitor_span = info_span!("daemon.monitor");
+            self.shutdown.register_task(tokio::spawn(
+                async move {
+                    run_auto_detection(detection_state, detection_cancel).await;
+                }
+                .instrument(monitor_span),
+            ));
         }
 
         if let Some(config) = self.state.daemon_config() {
@@ -106,12 +122,16 @@ impl Daemon {
             ) {
                 Ok(Some(server)) => {
                     let server_cancel = cancel.clone();
-                    let handle = tokio::spawn(async move {
-                        if let Err(err) = server.start().await {
-                            error!(error = %err, "HTTP server stopped with error");
-                            server_cancel.cancel();
+                    let http_span = info_span!("daemon.http");
+                    let handle = tokio::spawn(
+                        async move {
+                            if let Err(err) = server.start().await {
+                                error!(error = %err, "HTTP server stopped with error");
+                                server_cancel.cancel();
+                            }
                         }
-                    });
+                        .instrument(http_span),
+                    );
                     self.http_handle = Some(handle);
                 }
                 Ok(None) => {}
@@ -126,23 +146,30 @@ impl Daemon {
         let server = std::mem::take(&mut self.ipc_server);
         let server_state = Arc::clone(&self.state);
         let server_cancel = cancel.clone();
-        self.shutdown.register_task(tokio::spawn(async move {
-            let error_cancel = server_cancel.clone();
-            if let Err(err) = server.run(server_state, server_cancel).await {
-                error!(error = %err, "IPC server stopped with error");
-                error_cancel.cancel();
+        let ipc_span = info_span!("daemon.ipc");
+        self.shutdown.register_task(tokio::spawn(
+            async move {
+                let error_cancel = server_cancel.clone();
+                if let Err(err) = server.run(server_state, server_cancel).await {
+                    error!(error = %err, "IPC server stopped with error");
+                    error_cancel.cancel();
+                }
             }
-        }));
+            .instrument(ipc_span),
+        ));
 
         cancel.cancelled().await;
         info!("Shutdown requested");
 
         // Send DaemonStopped event BEFORE shutting down HTTP server
         // so SSE clients can receive it
-        if let Err(err) = self.event_broadcaster.send(NotificationEvent::DaemonStopped {
-            timestamp: Utc::now(),
-            reason: "shutdown".to_string(),
-        }) {
+        if let Err(err) = self
+            .event_broadcaster
+            .send(NotificationEvent::DaemonStopped {
+                timestamp: Utc::now(),
+                reason: "shutdown".to_string(),
+            })
+        {
             tracing::debug!(error = %err, "No SSE subscribers to receive daemon_stopped event");
         }
 
