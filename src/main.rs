@@ -1,5 +1,5 @@
 use clap::Parser;
-use palingenesis::cli::{commands, Cli, Commands, ConfigAction, DaemonAction};
+use palingenesis::cli::{Cli, Commands, ConfigAction, DaemonAction, commands};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
