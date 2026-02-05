@@ -158,6 +158,14 @@ impl HttpServer {
                 "/api/v1/new-session",
                 axum::routing::post(handlers::control::new_session_handler),
             )
+            .route(
+                "/api/v1/bot/discord",
+                axum::routing::post(handlers::bot_discord::discord_webhook_handler),
+            )
+            .route(
+                "/api/v1/bot/slack",
+                axum::routing::post(handlers::bot_slack::slack_webhook_handler),
+            )
             .fallback(Self::fallback_handler)
             .with_state(app_state)
             .layer(
