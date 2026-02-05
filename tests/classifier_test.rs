@@ -79,10 +79,49 @@ fn uses_default_wait_time_when_retry_after_missing() {
 #[test]
 fn prioritizes_rate_limit_when_multiple_indicators_present() {
     let classifier = StopReasonClassifier::new().expect("classifier");
-    let content = "rate_limit_error: too many requests; context exhausted";
+    let content = "rate_limit_error: too many requests; context_length_exceeded";
     let result = classifier.classify_content(content, None);
 
     assert!(matches!(result.reason, StopReason::RateLimit(_)));
+}
+
+#[test]
+fn detects_context_length_exceeded_pattern() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let content = include_str!("fixtures/context_exceeded.txt");
+    let result = classifier.classify_content(content, None);
+
+    assert!(matches!(result.reason, StopReason::ContextExhausted(_)));
+}
+
+#[test]
+fn detects_token_threshold_exceeded() {
+    let config = ClassifierConfig {
+        context_threshold_percent: 0.8,
+        default_context_size: 200,
+        ..Default::default()
+    };
+    let classifier = StopReasonClassifier::with_config(config).expect("classifier");
+    let content = include_str!("fixtures/token_limit.txt");
+    let result = classifier.classify_content(content, None);
+
+    match result.reason {
+        StopReason::ContextExhausted(Some(info)) => {
+            let usage = info.usage_percent.expect("usage percent");
+            assert!(usage > 0.8);
+            assert_eq!(info.context_size, Some(200));
+        }
+        other => panic!("expected context exhausted, got {other:?}"),
+    }
+}
+
+#[test]
+fn classifies_completed_sessions_before_context_exhaustion() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let path = fixture_path("session_complete.md");
+    let result = classifier.classify(&path, None);
+
+    assert!(matches!(result.reason, StopReason::Completed));
 }
 
 #[test]

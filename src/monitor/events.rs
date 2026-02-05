@@ -22,7 +22,7 @@ pub enum WatchEvent {
 }
 
 /// Events emitted by the monitor after parsing session state.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MonitorEvent {
     /// File was created in the session directory.
     FileCreated(PathBuf),
