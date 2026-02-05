@@ -52,6 +52,18 @@ impl StatusResponse {
             config_summary,
         }
     }
+
+    pub fn state(&self) -> &str {
+        &self.state
+    }
+
+    pub fn current_session(&self) -> Option<&String> {
+        self.current_session.as_ref()
+    }
+
+    pub fn stats(&self) -> &StatsResponse {
+        &self.stats
+    }
 }
 
 /// Runtime statistics for the daemon.
@@ -69,6 +81,10 @@ impl StatsResponse {
             saves_count: status.saves_count,
             total_resumes: status.total_resumes,
         }
+    }
+
+    pub fn uptime_secs(&self) -> u64 {
+        self.uptime_secs
     }
 }
 
@@ -97,11 +113,15 @@ pub async fn status_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<StatusEnvelope>) {
     let daemon_state = state.daemon_state();
+    let response = StatusEnvelope::new(build_status_snapshot(daemon_state));
+    (StatusCode::OK, Json(response))
+}
+
+pub fn build_status_snapshot(daemon_state: &DaemonState) -> StatusResponse {
     let status = daemon_state.get_status();
     let pid = read_daemon_pid();
     let config_summary = build_config_summary(daemon_state);
-    let response = StatusEnvelope::new(StatusResponse::from_status(status, pid, config_summary));
-    (StatusCode::OK, Json(response))
+    StatusResponse::from_status(status, pid, config_summary)
 }
 
 fn read_daemon_pid() -> Option<u32> {

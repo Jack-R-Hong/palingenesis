@@ -1,6 +1,3 @@
-#[cfg(test)]
-use std::sync::Arc;
-
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -8,7 +5,6 @@ use axum::Json;
 use serde::Serialize;
 use uuid::Uuid;
 
-#[cfg(test)]
 use crate::daemon::state::DaemonState;
 use crate::http::server::AppState;
 use crate::ipc::socket::DaemonStateAccess;
@@ -93,20 +89,74 @@ fn error_response(
     (status, Json(ControlErrorResponse::new(code, message)))
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlError {
+    pub code: String,
+    pub message: String,
+    pub status: StatusCode,
+}
+
+impl ControlError {
+    fn new(code: &str, message: &str, status: StatusCode) -> Self {
+        Self {
+            code: code.to_string(),
+            message: message.to_string(),
+            status,
+        }
+    }
+}
+
+pub fn pause_daemon(daemon_state: &DaemonState) -> Result<(), ControlError> {
+    match daemon_state.pause() {
+        Ok(()) => Ok(()),
+        Err(message) if message == error_messages::ALREADY_PAUSED => Err(ControlError::new(
+            "ALREADY_PAUSED",
+            &message,
+            StatusCode::BAD_REQUEST,
+        )),
+        Err(message) => Err(ControlError::new(
+            "PAUSE_ERROR",
+            &message,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )),
+    }
+}
+
+pub fn resume_daemon(daemon_state: &DaemonState) -> Result<(), ControlError> {
+    match daemon_state.resume() {
+        Ok(()) => Ok(()),
+        Err(message) if message == error_messages::NOT_PAUSED => Err(ControlError::new(
+            "NOT_PAUSED",
+            &message,
+            StatusCode::BAD_REQUEST,
+        )),
+        Err(message) => Err(ControlError::new(
+            "RESUME_ERROR",
+            &message,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )),
+    }
+}
+
+pub fn new_session_daemon(daemon_state: &DaemonState) -> Result<String, ControlError> {
+    match daemon_state.new_session() {
+        Ok(()) => Ok(Uuid::new_v4().to_string()),
+        Err(message) => Err(ControlError::new(
+            "SESSION_ERROR",
+            &message,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        )),
+    }
+}
+
 /// Handles POST /api/v1/pause requests to pause daemon monitoring.
 pub async fn pause_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
-    match daemon_state.pause() {
+    match pause_daemon(daemon_state) {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
-        Err(message) if message == error_messages::ALREADY_PAUSED => {
-            error_response("ALREADY_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
-        }
-        Err(message) => {
-            error_response("PAUSE_ERROR", &message, StatusCode::INTERNAL_SERVER_ERROR)
-                .into_response()
-        }
+        Err(err) => error_response(&err.code, &err.message, err.status).into_response(),
     }
 }
 
@@ -115,15 +165,9 @@ pub async fn resume_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
-    match daemon_state.resume() {
+    match resume_daemon(daemon_state) {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
-        Err(message) if message == error_messages::NOT_PAUSED => {
-            error_response("NOT_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
-        }
-        Err(message) => {
-            error_response("RESUME_ERROR", &message, StatusCode::INTERNAL_SERVER_ERROR)
-                .into_response()
-        }
+        Err(err) => error_response(&err.code, &err.message, err.status).into_response(),
     }
 }
 
@@ -132,21 +176,19 @@ pub async fn new_session_handler(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     let daemon_state = state.daemon_state();
-    match daemon_state.new_session() {
-        Ok(()) => {
-            let session_id = Uuid::new_v4().to_string();
+    match new_session_daemon(daemon_state) {
+        Ok(session_id) => {
             let response = ControlResponseWithId::success(session_id);
             (StatusCode::OK, Json(response)).into_response()
         }
-        Err(message) => {
-            error_response("SESSION_ERROR", &message, StatusCode::INTERNAL_SERVER_ERROR)
-                .into_response()
-        }
+        Err(err) => error_response(&err.code, &err.message, err.status).into_response(),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use axum::body::to_bytes;
     use axum::routing::post;
