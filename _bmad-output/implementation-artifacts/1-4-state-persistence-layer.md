@@ -1,6 +1,6 @@
 # Story 1.4: State Persistence Layer
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -35,42 +35,42 @@ So that I can survive restarts and maintain session context.
 
 ## Tasks / Subtasks
 
-- [ ] Create state module structure (AC: 1, 2, 3, 4)
-  - [ ] Create `src/state/mod.rs` with module exports
-  - [ ] Create `src/state/schema.rs` with state struct definitions
-  - [ ] Create `src/state/store.rs` with read/write operations
-- [ ] Define state schema structs (AC: 2)
-  - [ ] Define `StateFile` root struct with version field
-  - [ ] Define `DaemonState` enum (monitoring, paused, stopped)
-  - [ ] Define `CurrentSession` struct (path, steps_completed, last_step, total_steps)
-  - [ ] Define `Stats` struct (saves_count, total_resumes, last_resume)
-  - [ ] Implement `Default` trait for all structs
-- [ ] Implement state store operations (AC: 1, 2, 3, 4)
-  - [ ] Implement `StateStore::new()` - initialize with platform paths
-  - [ ] Implement `StateStore::load()` - read from JSON file
-  - [ ] Implement `StateStore::save()` - write to JSON file with atomic replace
-  - [ ] Implement file permission setting (mode 600 on Unix)
-- [ ] Add file locking for concurrent access (AC: 4)
-  - [ ] Add `fs2` crate dependency to Cargo.toml
-  - [ ] Implement exclusive lock on write operations
-  - [ ] Implement shared lock on read operations
-  - [ ] Add lock timeout handling
-- [ ] Implement corrupted state recovery (AC: 3)
-  - [ ] Detect corrupted/invalid JSON on load
-  - [ ] Create backup of corrupted file to `state.json.bak`
-  - [ ] Log warning with corruption details
-  - [ ] Initialize fresh default state
-- [ ] Integrate with platform paths from Story 1.3 (AC: 1)
-  - [ ] Use `Paths::state_dir()` for state file location
-  - [ ] Use `Paths::ensure_state_dir()` for directory creation
-- [ ] Add unit tests (AC: 1, 2, 3, 4)
-  - [ ] Test state serialization/deserialization
-  - [ ] Test default state initialization
-  - [ ] Test corrupted file recovery
-  - [ ] Test file permissions
-- [ ] Add integration tests
-  - [ ] Test concurrent access with file locking
-  - [ ] Test state persistence across simulated restarts
+- [x] Create state module structure (AC: 1, 2, 3, 4)
+  - [x] Create `src/state/mod.rs` with module exports
+  - [x] Create `src/state/schema.rs` with state struct definitions
+  - [x] Create `src/state/store.rs` with read/write operations
+- [x] Define state schema structs (AC: 2)
+  - [x] Define `StateFile` root struct with version field
+  - [x] Define `DaemonState` enum (monitoring, paused, stopped)
+  - [x] Define `CurrentSession` struct (path, steps_completed, last_step, total_steps)
+  - [x] Define `Stats` struct (saves_count, total_resumes, last_resume)
+  - [x] Implement `Default` trait for all structs
+- [x] Implement state store operations (AC: 1, 2, 3, 4)
+  - [x] Implement `StateStore::new()` - initialize with platform paths
+  - [x] Implement `StateStore::load()` - read from JSON file
+  - [x] Implement `StateStore::save()` - write to JSON file with atomic replace
+  - [x] Implement file permission setting (mode 600 on Unix)
+- [x] Add file locking for concurrent access (AC: 4)
+  - [x] Add `fs2` crate dependency to Cargo.toml
+  - [x] Implement exclusive lock on write operations
+  - [x] Implement shared lock on read operations
+  - [x] Add lock timeout handling
+- [x] Implement corrupted state recovery (AC: 3)
+  - [x] Detect corrupted/invalid JSON on load
+  - [x] Create backup of corrupted file to `state.json.bak`
+  - [x] Log warning with corruption details
+  - [x] Initialize fresh default state
+- [x] Integrate with platform paths from Story 1.3 (AC: 1)
+  - [x] Use `Paths::state_dir()` for state file location
+  - [x] Use `Paths::ensure_state_dir()` for directory creation
+- [x] Add unit tests (AC: 1, 2, 3, 4)
+  - [x] Test state serialization/deserialization
+  - [x] Test default state initialization
+  - [x] Test corrupted file recovery
+  - [x] Test file permissions
+- [x] Add integration tests
+  - [x] Test concurrent access with file locking
+  - [x] Test state persistence across simulated restarts
 
 ## Dev Notes
 
@@ -386,21 +386,33 @@ From Story 1-3:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+openai/gpt-5.2-codex
 
 ### Debug Log References
 
+- `cargo build`
+- `cargo test`
+- `cargo clippy`
+
 ### Completion Notes List
+
+- Added state schema types and defaults with JSON serialization support.
+- Implemented state store with atomic writes, lock timeout handling, and corrupted file recovery.
+- Added unit and integration tests for persistence, permissions, and concurrency.
 
 ### File List
 
 **Files to create:**
-- `src/state/mod.rs`
 - `src/state/schema.rs`
 - `src/state/store.rs`
 - `tests/state_test.rs`
 
 **Files to modify:**
 - `Cargo.toml` - Add fs2, chrono, serde_json dependencies
-- `src/lib.rs` - Add state module declaration
+- `src/state/mod.rs` - Export state modules and types
+- `_bmad-output/implementation-artifacts/1-4-state-persistence-layer.md` - Update story status and tasks
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` - Update story status
+
+## Change Log
+
+- 2026-02-05: Added state schema, store, and tests with file locking and recovery.
