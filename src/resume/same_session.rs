@@ -7,6 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use crate::monitor::session::{Session, StepValue};
+use crate::resume::backoff::{Backoff, BackoffConfig};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
 use crate::state::{CurrentSession, StateStore};
 
@@ -19,6 +20,10 @@ pub struct SameSessionConfig {
     pub backoff_max_secs: u64,
     /// Maximum retry attempts before giving up.
     pub max_retries: u32,
+    /// Enable jitter in backoff delays.
+    pub backoff_jitter: bool,
+    /// Jitter percentage (0.0 to 1.0).
+    pub backoff_jitter_percent: f64,
     /// Command used to trigger session continuation.
     pub resume_command: Vec<String>,
 }
@@ -29,6 +34,8 @@ impl Default for SameSessionConfig {
             backoff_base_secs: 30,
             backoff_max_secs: 300,
             max_retries: 5,
+            backoff_jitter: true,
+            backoff_jitter_percent: 0.1,
             resume_command: vec![
                 "opencode".to_string(),
                 "continue".to_string(),
@@ -128,12 +135,20 @@ impl SameSessionStrategy {
     }
 
     fn backoff_delay(&self, attempt_number: u32) -> Duration {
-        let exponent = attempt_number.saturating_sub(1).min(63) as u32;
-        let multiplier = 1u64.checked_shl(exponent).unwrap_or(u64::MAX);
-        let base = self.config.backoff_base_secs;
-        let delay = base.saturating_mul(multiplier);
-        let capped = delay.min(self.config.backoff_max_secs);
-        Duration::from_secs(capped)
+        let config = BackoffConfig {
+            base_delay: Duration::from_secs(self.config.backoff_base_secs),
+            max_delay: Duration::from_secs(self.config.backoff_max_secs),
+            max_retries: self.config.max_retries,
+            jitter_enabled: self.config.backoff_jitter,
+            jitter_percent: self.config.backoff_jitter_percent,
+        };
+
+        let backoff = Backoff::with_config(config).unwrap_or_else(|err| {
+            warn!(error = %err, "Invalid backoff config, using defaults");
+            Backoff::default()
+        });
+
+        backoff.delay_for_attempt(attempt_number)
     }
 
     async fn wait_or_cancel(&self, duration: Duration) -> bool {
@@ -179,12 +194,18 @@ impl SameSessionStrategy {
             ..CurrentSession::default()
         }
     }
+
 }
 
 #[async_trait]
 impl ResumeStrategy for SameSessionStrategy {
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
         if ctx.attempt_number > self.config.max_retries {
+            warn!(
+                attempts = ctx.attempt_number,
+                max_retries = self.config.max_retries,
+                "Retry limit exceeded"
+            );
             return Ok(ResumeOutcome::failure(
                 format!(
                     "Retry limit exceeded after {} attempts",

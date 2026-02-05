@@ -49,8 +49,9 @@ async fn same_session_waits_for_retry_after() {
     };
     let ctx = ResumeContext::new(PathBuf::from("/tmp/session.md"), rate_limit_reason())
         .with_retry_after(Duration::from_secs(60));
-    let strategy = SameSessionStrategy::with_config(SameSessionConfig::default())
-        .with_trigger(trigger);
+    let mut config = SameSessionConfig::default();
+    config.backoff_jitter = false;
+    let strategy = SameSessionStrategy::with_config(config).with_trigger(trigger);
 
     let handle = tokio::spawn(async move { strategy.execute(&ctx).await });
 
@@ -138,11 +139,10 @@ async fn same_session_updates_state_on_success() {
         },
     };
     let ctx = ResumeContext::new(session_path.clone(), rate_limit_reason())
-        .with_session(metadata);
+        .with_session(metadata)
+        .with_retry_after(Duration::from_secs(0));
 
-    let mut config = SameSessionConfig::default();
-    config.backoff_base_secs = 0;
-    config.backoff_max_secs = 0;
+    let config = SameSessionConfig::default();
 
     let strategy = SameSessionStrategy::with_config(config).with_trigger(trigger);
     let outcome = strategy.execute(&ctx).await.expect("outcome");
