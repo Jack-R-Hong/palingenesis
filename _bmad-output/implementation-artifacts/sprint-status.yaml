@@ -91,7 +91,7 @@ development_status:
   6-1-http-api-server-setup: done
   6-2-health-endpoint: done
   6-3-status-api-endpoint: done
-  6-4-control-api-endpoints: backlog
+  6-4-control-api-endpoints: ready-for-dev
   6-5-events-sse-stream: backlog
   6-6-discord-slack-bot-commands: backlog
   epic-6-retrospective: optional
