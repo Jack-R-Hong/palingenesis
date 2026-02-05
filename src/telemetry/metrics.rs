@@ -255,6 +255,10 @@ impl Metrics {
         self.update_session_gauges();
     }
 
+    /// Records the start of a resume operation.
+    ///
+    /// # Arguments
+    /// * `reason` - The reason for the resume: "rate_limit", "context_exhausted", or "manual"
     pub fn record_resume_started(&self, reason: &str) {
         self.resumes_total
             .get_or_create(&ResumeReasonLabels {
@@ -263,6 +267,12 @@ impl Metrics {
             .inc();
     }
 
+    /// Records the completion of a resume operation.
+    ///
+    /// # Arguments
+    /// * `duration` - Time taken for the resume operation
+    /// * `success` - Whether the resume succeeded
+    /// * `error_type` - Error type label if failed: "timeout", "spawn_failed", "command_failed", etc.
     pub fn record_resume_completed(
         &self,
         duration: Duration,
