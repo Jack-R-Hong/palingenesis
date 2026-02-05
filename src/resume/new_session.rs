@@ -526,7 +526,7 @@ fn parse_leading_number(input: &str) -> Option<(u32, String)> {
 
     let number = digits.parse::<u32>().ok()?;
     let remainder = input[index..]
-        .trim_start_matches(|ch: char| ch == '.' || ch == ':' || ch == ')' || ch == '-')
+        .trim_start_matches(['.', ':', ')', '-'])
         .trim();
 
     Some((number, remainder.to_string()))

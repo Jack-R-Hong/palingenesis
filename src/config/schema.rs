@@ -21,7 +21,7 @@ use crate::config::Paths;
 /// [notifications]
 /// enabled = false
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
 pub struct Config {
     /// Daemon configuration section.
@@ -46,20 +46,6 @@ pub struct Config {
     /// Example: [otel]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub otel: Option<OtelConfig>,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            daemon: DaemonConfig::default(),
-            monitoring: MonitoringConfig::default(),
-            resume: ResumeConfig::default(),
-            notifications: NotificationsConfig::default(),
-            bot: BotConfig::default(),
-            metrics: MetricsConfig::default(),
-            otel: None,
-        }
-    }
 }
 
 /// Metrics configuration.
@@ -203,7 +189,7 @@ impl Default for ResumeConfig {
 }
 
 /// Notification channel configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
 pub struct NotificationsConfig {
     /// Enable notifications globally.
@@ -221,18 +207,6 @@ pub struct NotificationsConfig {
     /// Slack notification configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slack: Option<SlackConfig>,
-}
-
-impl Default for NotificationsConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            webhook: None,
-            ntfy: None,
-            discord: None,
-            slack: None,
-        }
-    }
 }
 
 /// Bot command configuration.

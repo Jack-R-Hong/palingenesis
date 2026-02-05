@@ -131,12 +131,10 @@ fn has_session_files(dir: &Path) -> bool {
 }
 
 fn is_session_artifact(path: &Path) -> bool {
-    match path.extension().and_then(|ext| ext.to_str()) {
-        Some("md") => true,
-        Some("lock") => true,
-        Some("sock") => true,
-        _ => false,
-    }
+    matches!(
+        path.extension().and_then(|ext| ext.to_str()),
+        Some("md") | Some("lock") | Some("sock")
+    )
 }
 
 #[cfg(unix)]

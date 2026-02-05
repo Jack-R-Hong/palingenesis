@@ -146,7 +146,7 @@ fn extract_timestamp(line: &str) -> Option<&str> {
 }
 
 fn parse_timestamp(timestamp_str: &str) -> anyhow::Result<SystemTime> {
-    let parts: Vec<&str> = timestamp_str.split(|c| c == '-' || c == 'T' || c == ':').collect();
+    let parts: Vec<&str> = timestamp_str.split(['-', 'T', ':']).collect();
     if parts.len() < 6 {
         anyhow::bail!("Invalid timestamp format");
     }
@@ -159,13 +159,14 @@ fn parse_timestamp(timestamp_str: &str) -> anyhow::Result<SystemTime> {
     let second: u32 = parts[5].parse()?;
 
     let days_since_epoch = days_since_unix_epoch(year, month, day)?;
-    let secs_since_epoch = days_since_epoch as u64 * 86400 + hour as u64 * 3600 + minute as u64 * 60 + second as u64;
+    let secs_since_epoch =
+        days_since_epoch as u64 * 86400 + hour as u64 * 3600 + minute as u64 * 60 + second as u64;
 
     Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(secs_since_epoch))
 }
 
 fn days_since_unix_epoch(year: u32, month: u32, day: u32) -> anyhow::Result<i64> {
-    if month < 1 || month > 12 || day < 1 || day > 31 {
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
         anyhow::bail!("Invalid date");
     }
 

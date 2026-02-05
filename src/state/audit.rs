@@ -117,7 +117,7 @@ impl AuditEntry {
 }
 
 /// Audit trail logger.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AuditLogger {
     config: AuditConfig,
 }
@@ -270,14 +270,6 @@ impl AuditLogger {
             .with_outcome(AuditOutcome::Success)
             .with_metadata("backup_path", backup.display().to_string());
         self.log(&entry)
-    }
-}
-
-impl Default for AuditLogger {
-    fn default() -> Self {
-        Self {
-            config: AuditConfig::default(),
-        }
     }
 }
 

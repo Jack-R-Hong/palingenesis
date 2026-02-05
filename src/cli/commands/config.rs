@@ -21,11 +21,9 @@ enum ValidationStatus {
 pub async fn handle_init(force: bool, custom_path: Option<PathBuf>) -> anyhow::Result<()> {
     let config_path = custom_path.unwrap_or_else(Paths::config_file);
 
-    if config_path.exists() && !force {
-        if !confirm_overwrite(&config_path)? {
-            println!("Aborted.");
-            return Ok(());
-        }
+    if config_path.exists() && !force && !confirm_overwrite(&config_path)? {
+        println!("Aborted.");
+        return Ok(());
     }
 
     if let Some(parent) = config_path.parent() {

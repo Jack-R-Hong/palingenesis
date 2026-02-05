@@ -8,7 +8,6 @@ use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
-
 const DEFAULT_POLL_INTERVAL_MS: u64 = 1000;
 const OPENCODE_PROCESS_NAME: &str = "opencode";
 const EVENT_CHANNEL_CAPACITY: usize = 100;
@@ -101,7 +100,10 @@ impl ProcessMonitor {
     }
 
     /// Run the process monitor, returning a receiver for monitor events.
-    pub async fn run(self, cancel: CancellationToken) -> Result<ProcessEventReceiver, ProcessError> {
+    pub async fn run(
+        self,
+        cancel: CancellationToken,
+    ) -> Result<ProcessEventReceiver, ProcessError> {
         let (tx, rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
         let mut state = ProcessMonitorState::new(self.poll_interval, self.enumerator);
 
@@ -158,7 +160,10 @@ impl ProcessMonitorState {
         }
     }
 
-    async fn emit_existing_processes(&mut self, tx: &ProcessEventSender) -> Result<(), ProcessError> {
+    async fn emit_existing_processes(
+        &mut self,
+        tx: &ProcessEventSender,
+    ) -> Result<(), ProcessError> {
         let initial = self.enumerator.list_opencode_processes()?;
         for process in initial {
             self.tracked_processes.insert(process.pid, process.clone());
@@ -181,10 +186,11 @@ impl ProcessMonitorState {
         let current_pids: HashSet<u32> = current.iter().map(|process| process.pid).collect();
 
         for process in &current {
-            if !self.tracked_processes.contains_key(&process.pid) {
+            if let std::collections::hash_map::Entry::Vacant(e) =
+                self.tracked_processes.entry(process.pid)
+            {
                 info!(pid = process.pid, "New opencode process detected");
-                self.tracked_processes
-                    .insert(process.pid, process.clone());
+                e.insert(process.clone());
                 if cancel.is_cancelled() {
                     return Ok(());
                 }
@@ -374,7 +380,7 @@ mod tests {
     #[derive(Default)]
     struct MockEnumerator {
         sequences: Mutex<VecDeque<Result<Vec<ProcessInfo>, ProcessError>>>,
-        exit_codes: Mutex<HashMap<u32, i32>>, 
+        exit_codes: Mutex<HashMap<u32, i32>>,
     }
 
     impl MockEnumerator {
@@ -401,7 +407,11 @@ mod tests {
         }
 
         fn try_get_exit_code(&self, pid: u32) -> Option<i32> {
-            self.exit_codes.lock().expect("lock exit codes").get(&pid).copied()
+            self.exit_codes
+                .lock()
+                .expect("lock exit codes")
+                .get(&pid)
+                .copied()
         }
     }
 
@@ -458,8 +468,12 @@ mod tests {
 
         let mut rx = monitor.run(cancel.clone()).await.expect("run monitor");
 
-        let _ = timeout(Duration::from_millis(50), rx.recv()).await.expect("start event");
-        let _ = timeout(Duration::from_millis(50), rx.recv()).await.expect("start event");
+        let _ = timeout(Duration::from_millis(50), rx.recv())
+            .await
+            .expect("start event");
+        let _ = timeout(Duration::from_millis(50), rx.recv())
+            .await
+            .expect("start event");
 
         let event = timeout(Duration::from_millis(100), rx.recv())
             .await
@@ -512,7 +526,9 @@ mod tests {
         let cancel = CancellationToken::new();
 
         let mut rx = monitor.run(cancel.clone()).await.expect("run monitor");
-        let _ = timeout(Duration::from_millis(50), rx.recv()).await.expect("start event");
+        let _ = timeout(Duration::from_millis(50), rx.recv())
+            .await
+            .expect("start event");
 
         cancel.cancel();
 

@@ -5,7 +5,7 @@
 **Epic:** 7 - Observability & Metrics
 **Story ID:** 7-4
 **Title:** Saves Count Metric
-**Status:** ready-for-dev
+**Status:** done
 **Priority:** Growth
 **Story Points:** 2
 

@@ -154,7 +154,7 @@ impl Backoff {
 
     fn base_delay_for_attempt(&self, attempt: u32) -> Duration {
         let attempt = attempt.max(1);
-        let exponent = attempt.saturating_sub(1).min(31) as u32;
+        let exponent = attempt.saturating_sub(1).min(31);
         let multiplier = 2u128.saturating_pow(exponent);
         let base_millis = self.config.base_delay.as_millis();
         let delay_millis = base_millis.saturating_mul(multiplier);
