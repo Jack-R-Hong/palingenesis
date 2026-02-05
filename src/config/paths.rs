@@ -164,9 +164,7 @@ impl Paths {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    use crate::test_utils::ENV_LOCK;
 
     fn set_env_var(key: &str, value: impl AsRef<std::ffi::OsStr>) {
         unsafe {
@@ -223,12 +221,16 @@ mod tests {
         let config_dir = Paths::config_dir();
         let state_dir = Paths::state_dir();
 
-        assert!(config_dir
-            .to_string_lossy()
-            .contains(".config/palingenesis"));
-        assert!(state_dir
-            .to_string_lossy()
-            .contains(".local/state/palingenesis"));
+        assert!(
+            config_dir
+                .to_string_lossy()
+                .contains(".config/palingenesis")
+        );
+        assert!(
+            state_dir
+                .to_string_lossy()
+                .contains(".local/state/palingenesis")
+        );
     }
 
     #[test]
@@ -241,12 +243,16 @@ mod tests {
         let config_dir = Paths::config_dir();
         let state_dir = Paths::state_dir();
 
-        assert!(config_dir
-            .to_string_lossy()
-            .contains("Application Support/palingenesis"));
-        assert!(state_dir
-            .to_string_lossy()
-            .contains("Application Support/palingenesis"));
+        assert!(
+            config_dir
+                .to_string_lossy()
+                .contains("Application Support/palingenesis")
+        );
+        assert!(
+            state_dir
+                .to_string_lossy()
+                .contains("Application Support/palingenesis")
+        );
     }
 
     #[test]

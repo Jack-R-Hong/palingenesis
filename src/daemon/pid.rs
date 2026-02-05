@@ -191,10 +191,8 @@ impl Default for PidFile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::ENV_LOCK;
     use std::env;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     fn set_env_var(key: &str, value: impl AsRef<std::ffi::OsStr>) {
         unsafe {
