@@ -1,0 +1,285 @@
+use std::net::SocketAddr;
+use std::time::Duration;
+
+use anyhow::{Context, Result};
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use axum::{Json, Router};
+use serde_json::json;
+use tokio::net::TcpListener;
+use tokio_util::sync::CancellationToken;
+use tower_http::trace::TraceLayer;
+use tracing::{info, warn};
+
+use crate::config::schema::DaemonConfig;
+
+/// HTTP API server for external integrations.
+pub struct HttpServer {
+    bind_addr: SocketAddr,
+    router: Router,
+    shutdown: CancellationToken,
+}
+
+impl HttpServer {
+    /// Create a new HTTP server from daemon configuration.
+    pub fn from_config(config: &DaemonConfig, shutdown: CancellationToken) -> Result<Option<Self>> {
+        if !config.http_enabled {
+            return Ok(None);
+        }
+
+        Ok(Some(Self::new(
+            &config.http_bind,
+            config.http_port,
+            shutdown,
+        )?))
+    }
+
+    /// Create a new HTTP server with bind address and shutdown token.
+    pub fn new(bind: &str, port: u16, shutdown: CancellationToken) -> Result<Self> {
+        let bind_addr: SocketAddr = format!("{bind}:{port}")
+            .parse()
+            .with_context(|| format!("Invalid HTTP bind address: {bind}:{port}"))?;
+
+        if bind == "0.0.0.0" {
+            warn!(
+                port,
+                "HTTP API binding to all interfaces (0.0.0.0). This exposes the API to the network."
+            );
+        }
+
+        let router = Self::create_router();
+
+        Ok(Self {
+            bind_addr,
+            router,
+            shutdown,
+        })
+    }
+
+    pub fn bind_addr(&self) -> SocketAddr {
+        self.bind_addr
+    }
+
+    pub fn shutdown(&self) {
+        self.shutdown.cancel();
+    }
+
+    /// Start the HTTP server and wait for shutdown.
+    pub async fn start(&self) -> Result<()> {
+        let listener = TcpListener::bind(self.bind_addr)
+            .await
+            .with_context(|| format!("Failed to bind HTTP API to {}", self.bind_addr))?;
+        let local_addr = listener
+            .local_addr()
+            .context("Failed to read bound HTTP address")?;
+        info!(address = %local_addr, "HTTP API server listening");
+
+        let shutdown = self.shutdown.clone();
+        axum::serve(listener, self.router.clone())
+            .with_graceful_shutdown(async move {
+                shutdown.cancelled().await;
+                info!("HTTP API server shutting down");
+            })
+            .await
+            .context("HTTP API server failed")?;
+
+        info!("HTTP API server stopped");
+        Ok(())
+    }
+
+    fn create_router() -> Router {
+        Router::new()
+            .fallback(Self::fallback_handler)
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(|request: &Request<Body>| {
+                        tracing::info_span!(
+                            "http_request",
+                            method = %request.method(),
+                            uri = %request.uri(),
+                        )
+                    })
+                    .on_request(|_request: &Request<Body>, _span: &tracing::Span| {
+                        tracing::info!("started");
+                    })
+                    .on_response(|response: &axum::http::Response<_>, latency: Duration, _span: &tracing::Span| {
+                        let status = response.status();
+                        if status.is_server_error() {
+                            tracing::error!(%status, ?latency, "finished");
+                        } else if status.is_client_error() {
+                            tracing::warn!(%status, ?latency, "finished");
+                        } else {
+                            tracing::info!(%status, ?latency, "finished");
+                        }
+                    })
+                    .on_failure(|error, latency: Duration, _span: &tracing::Span| {
+                        tracing::error!(?error, ?latency, "failed");
+                    }),
+            )
+    }
+
+    async fn fallback_handler() -> (StatusCode, Json<serde_json::Value>) {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "not_found",
+                "message": "The requested endpoint does not exist",
+            })),
+        )
+    }
+
+    #[cfg(test)]
+    pub(crate) fn router(&self) -> Router {
+        self.router.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::to_bytes;
+    use std::io::Write;
+    use std::sync::{Arc, Mutex};
+
+    use tower::ServiceExt;
+    use tracing_subscriber::layer::SubscriberExt;
+
+    #[derive(Clone)]
+    struct BufferWriter {
+        buffer: Arc<Mutex<Vec<u8>>>,
+    }
+
+    struct BufferGuard {
+        buffer: Arc<Mutex<Vec<u8>>>,
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for BufferWriter {
+        type Writer = BufferGuard;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            BufferGuard {
+                buffer: Arc::clone(&self.buffer),
+            }
+        }
+    }
+
+    impl Write for BufferGuard {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let mut guard = self.buffer.lock().unwrap();
+            guard.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn capture_logs() -> (Arc<Mutex<Vec<u8>>>, tracing::subscriber::DefaultGuard) {
+        let buffer = Arc::new(Mutex::new(Vec::new()));
+        let writer = BufferWriter {
+            buffer: Arc::clone(&buffer),
+        };
+        let subscriber = tracing_subscriber::registry().with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(writer)
+                .with_ansi(false),
+        );
+        let guard = tracing::subscriber::set_default(subscriber);
+        (buffer, guard)
+    }
+
+    fn pick_port() -> u16 {
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port()
+    }
+
+    #[test]
+    fn test_bind_addr_parsing() {
+        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        assert_eq!(server.bind_addr(), "127.0.0.1:7654".parse().unwrap());
+    }
+
+    #[test]
+    fn test_custom_port_configuration() {
+        let server = HttpServer::new("127.0.0.1", 9001, CancellationToken::new()).unwrap();
+        assert_eq!(server.bind_addr().port(), 9001);
+    }
+
+    #[test]
+    fn test_binding_all_interfaces_warns() {
+        let (buffer, _guard) = capture_logs();
+        let _server = HttpServer::new("0.0.0.0", 7654, CancellationToken::new()).unwrap();
+        let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+        assert!(output.contains("HTTP API binding to all interfaces"));
+    }
+
+    #[test]
+    fn test_http_disabled_returns_none() {
+        let mut config = DaemonConfig::default();
+        config.http_enabled = false;
+        let result = HttpServer::from_config(&config, CancellationToken::new()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_router_fallback_returns_json() {
+        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        let response = server
+            .router()
+            .oneshot(
+                Request::builder()
+                    .uri("/missing")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["error"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn test_request_logging() {
+        let (buffer, _guard) = capture_logs();
+        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        let response = server
+            .router()
+            .oneshot(
+                Request::builder()
+                    .uri("/missing")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
+        assert!(output.contains("http_request"));
+        assert!(output.contains("finished"));
+    }
+
+    #[tokio::test]
+    async fn test_server_start_and_shutdown() {
+        let port = pick_port();
+        let shutdown = CancellationToken::new();
+        let server = HttpServer::new("127.0.0.1", port, shutdown.clone()).unwrap();
+        let handle = tokio::spawn(async move {
+            server.start().await.unwrap();
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let response = reqwest::get(format!("http://127.0.0.1:{port}/missing"))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
+
+        shutdown.cancel();
+        handle.await.unwrap();
+    }
+}
