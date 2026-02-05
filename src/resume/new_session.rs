@@ -422,6 +422,9 @@ impl ResumeStrategy for NewSessionStrategy {
             let _ = logger.log_session_created(&new_session_path);
         }
 
+        // New sessions triggered by context exhaustion don't have a wait period
+        // since they start immediately. Time saved is still recorded (manual restart
+        // time only) to capture the value of automatic session continuation.
         if let Err(err) = self.update_state_on_resume(
             ctx,
             new_session_path.clone(),

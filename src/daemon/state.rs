@@ -95,6 +95,7 @@ impl DaemonStateAccess for DaemonState {
             saves_count: self.sessions_count.load(Ordering::SeqCst),
             total_resumes: self.resumes_count.load(Ordering::SeqCst),
             time_saved_seconds,
+            time_saved_human: Some(format_time_saved(time_saved_seconds)),
         }
     }
 
@@ -256,6 +257,22 @@ fn log_non_reloadable_changes(old: &Config, new: &Config) {
     }
     if old.otel != new.otel {
         warn!("Setting otel requires restart to take effect");
+    }
+}
+
+fn format_time_saved(seconds: f64) -> String {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return "0 seconds".to_string();
+    }
+
+    if seconds < 60.0 {
+        format!("{:.0} seconds", seconds)
+    } else if seconds < 3600.0 {
+        format!("{:.1} minutes", seconds / 60.0)
+    } else if seconds < 86400.0 {
+        format!("{:.1} hours", seconds / 3600.0)
+    } else {
+        format!("{:.1} days", seconds / 86400.0)
     }
 }
 

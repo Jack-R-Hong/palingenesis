@@ -6,13 +6,31 @@ use crate::config::schema::{Config, MetricsConfig};
 use crate::config::validation::validate_config;
 use crate::config::Paths;
 
+/// Result of calculating time saved by automatic session resumption.
+///
+/// Time saved is estimated as: `wait_duration + manual_restart_time`
+/// where:
+/// - `wait_duration` is the actual time spent waiting (e.g., for rate limit to expire)
+/// - `manual_restart_time` is the estimated time a user would spend manually detecting
+///   and restarting a stopped session (configurable, default 5 minutes)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TimeSavedCalculation {
+    /// Duration the daemon waited before resuming (seconds).
     pub wait_duration_seconds: f64,
+    /// Estimated manual restart time from config (seconds).
     pub manual_restart_seconds: f64,
+    /// Total time saved: wait_duration + manual_restart (seconds).
     pub total_saved_seconds: f64,
 }
 
+/// Calculate time saved by a successful resume operation.
+///
+/// # Arguments
+/// * `wait_duration` - Time spent waiting before resume (e.g., rate limit backoff)
+/// * `config` - Metrics configuration containing manual_restart_time_seconds
+///
+/// # Returns
+/// A [`TimeSavedCalculation`] with the breakdown and total time saved.
 pub fn calculate_time_saved(
     wait_duration: Duration,
     config: &MetricsConfig,

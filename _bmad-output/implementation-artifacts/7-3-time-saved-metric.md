@@ -5,7 +5,7 @@
 **Epic:** 7 - Observability & Metrics
 **Story ID:** 7-3
 **Title:** Time Saved Metric
-**Status:** review
+**Status:** done
 **Priority:** Growth
 **Story Points:** 3
 

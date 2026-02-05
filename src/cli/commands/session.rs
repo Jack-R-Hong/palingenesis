@@ -119,6 +119,7 @@ mod tests {
                 saves_count: 1,
                 total_resumes: 1,
                 time_saved_seconds: 0.0,
+                time_saved_human: None,
             }
         }
 

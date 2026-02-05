@@ -50,6 +50,8 @@ pub struct DaemonStatus {
     pub saves_count: u64,
     pub total_resumes: u64,
     pub time_saved_seconds: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub time_saved_human: Option<String>,
 }
 
 impl IpcResponse {
@@ -106,6 +108,7 @@ mod tests {
             saves_count: 7,
             total_resumes: 3,
             time_saved_seconds: 360.0,
+            time_saved_human: Some("6.0 minutes".to_string()),
         };
         let text = IpcResponse::Status(status.clone()).to_text();
         let json = text.trim_end();
