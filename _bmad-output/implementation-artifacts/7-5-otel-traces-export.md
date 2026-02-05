@@ -306,23 +306,23 @@ daemon.run (root span)
 
 ## Definition of Done
 
-- [ ] `src/telemetry/otel.rs` created with OTEL initialization
-- [ ] Feature flag `otel` added to Cargo.toml
-- [ ] Config schema extended with `[otel]` section
-- [ ] OTEL tracer integrates with existing tracing subscriber
-- [ ] Resume operations instrumented with spans
-- [ ] HTTP requests traced via middleware
-- [ ] Daemon lifecycle spans created
-- [ ] Graceful degradation on export failure
-- [ ] OTEL disabled by default (no overhead)
-- [ ] Config validation for OTEL settings
-- [ ] Unit tests for OTEL initialization
-- [ ] Integration test with mock OTLP collector
-- [ ] Documentation in README for OTEL setup
-- [ ] All tests pass (`cargo nextest run`)
-- [ ] All tests pass with feature (`cargo nextest run --features otel`)
-- [ ] No clippy warnings (`cargo clippy --features otel`)
-- [ ] Code formatted (`cargo fmt`)
+- [x] `src/telemetry/otel.rs` created with OTEL initialization
+- [x] Feature flag `otel` added to Cargo.toml
+- [x] Config schema extended with `[otel]` section
+- [x] OTEL tracer integrates with existing tracing subscriber
+- [x] Resume operations instrumented with spans
+- [x] HTTP requests traced via middleware
+- [x] Daemon lifecycle spans created
+- [x] Graceful degradation on export failure
+- [x] OTEL disabled by default (no overhead)
+- [x] Config validation for OTEL settings
+- [x] Unit tests for OTEL initialization
+- [ ] Integration test with mock OTLP collector (deferred - requires external infrastructure)
+- [x] Documentation in README for OTEL setup
+- [x] All tests pass (`cargo nextest run`)
+- [x] All tests pass with feature (`cargo nextest run --features otel`)
+- [x] No clippy warnings (`cargo clippy --features otel`)
+- [x] Code formatted (`cargo fmt`)
 
 ## Test Scenarios
 

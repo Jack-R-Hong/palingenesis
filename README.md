@@ -16,8 +16,8 @@ A lightweight Rust daemon that monitors AI coding assistant sessions (opencode/S
 - **Intelligent Waiting**: Respects `Retry-After` headers, uses exponential backoff
 - **Session Resumption**: Continues same session or starts new from `Next-step.md`
 - **CLI Control**: Full daemon management via command line
-- **Notifications**: Webhook, Discord, Slack, ntfy.sh support (planned)
-- **Observability**: OpenTelemetry traces and metrics (planned)
+- **Notifications**: Webhook, Discord, Slack, ntfy.sh support
+- **Observability**: OpenTelemetry traces export, Prometheus metrics endpoint
 
 ## Installation
 
