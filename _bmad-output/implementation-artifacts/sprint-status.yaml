@@ -42,14 +42,14 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: Session Detection & Classification
-  epic-2: in-progress
+  epic-2: done
   2-1-file-system-watcher-setup: done
   2-2-session-file-parser-frontmatter-extraction: done
   2-3-process-detection-opencode-start-stop: done
   2-4-stop-reason-classification-rate-limit: done
   2-5-stop-reason-classification-context-exhaustion: done
   2-6-stop-reason-classification-user-exit: done
-  2-7-monitor-event-channel: ready-for-dev
+  2-7-monitor-event-channel: done
   epic-2-retrospective: optional
 
   # Epic 3: Automatic Session Resumption
