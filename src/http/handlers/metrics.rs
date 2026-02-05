@@ -118,6 +118,19 @@ mod tests {
         assert!(text.contains("palingenesis_daemon_state"));
         assert!(text.contains("palingenesis_uptime_seconds"));
         assert!(text.contains("palingenesis_build_info"));
+        assert!(text.contains("palingenesis_resumes_total"));
+        assert!(text.contains("palingenesis_resumes_success_total"));
+        assert!(text.contains("palingenesis_resumes_failure_total"));
+        assert!(text.contains("palingenesis_sessions_started_total"));
+        assert!(text.contains("palingenesis_rate_limits_total"));
+        assert!(text.contains("palingenesis_context_exhaustions_total"));
+        assert!(text.contains("palingenesis_current_session_steps_completed"));
+        assert!(text.contains("palingenesis_current_session_steps_total"));
+        assert!(text.contains("palingenesis_active_sessions"));
+        assert!(text.contains("palingenesis_retry_attempts"));
+        assert!(text.contains("palingenesis_resume_duration_seconds"));
+        assert!(text.contains("palingenesis_detection_latency_seconds"));
+        assert!(text.contains("palingenesis_wait_duration_seconds"));
     }
 
     #[tokio::test]

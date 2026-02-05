@@ -147,6 +147,7 @@ impl HttpServer {
 
     fn create_router(state: Arc<DaemonState>, events: EventBroadcaster) -> Router {
         let metrics = Arc::new(Metrics::new());
+        let _ = Metrics::set_global(Arc::clone(&metrics));
         let app_state = AppState::new(state, events, metrics);
         Router::new()
             .route("/health", axum::routing::get(handlers::health::health_handler))
