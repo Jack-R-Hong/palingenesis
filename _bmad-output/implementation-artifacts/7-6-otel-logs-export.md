@@ -120,17 +120,17 @@ logs = true
 
 ## Definition of Done
 
-- [ ] `logs` field added to OtelConfig (default: false)
-- [ ] `opentelemetry-appender-tracing` added to Cargo.toml under otel feature
-- [ ] Logs layer builder implemented in otel.rs
-- [ ] Logs layer integrated with tracing subscriber
-- [ ] Logs include trace context (trace_id, span_id)
-- [ ] Graceful degradation on export failure
-- [ ] Local logging unaffected by OTEL logs
-- [ ] All tests pass (`cargo nextest run`)
-- [ ] All tests pass with feature (`cargo nextest run --features otel`)
-- [ ] No clippy warnings (`cargo clippy --features otel`)
-- [ ] Code formatted (`cargo fmt`)
+- [x] `logs` field added to OtelConfig (default: false)
+- [x] `opentelemetry-appender-tracing` added to Cargo.toml under otel feature
+- [x] Logs layer builder implemented in otel.rs
+- [x] Logs layer integrated with tracing subscriber
+- [x] Logs include trace context (trace_id, span_id)
+- [x] Graceful degradation on export failure
+- [x] Local logging unaffected by OTEL logs
+- [x] All tests pass (`cargo nextest run`)
+- [x] All tests pass with feature (`cargo nextest run --features otel`)
+- [x] No clippy warnings (`cargo clippy --features otel`)
+- [x] Code formatted (`cargo fmt`)
 
 ## Test Scenarios
 
