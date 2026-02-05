@@ -1,6 +1,6 @@
 # Story 1.2: CLI Framework with Clap Subcommands
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -33,33 +33,33 @@ So that I can easily discover and use all palingenesis features.
 
 ## Tasks / Subtasks
 
-- [ ] Add missing commands to CLI structure (AC: 1, 3)
-  - [ ] Add `NewSession` command to Commands enum
-  - [ ] Add `Status` variant to DaemonAction enum
-- [ ] Add missing logs option (AC: 4)
-  - [ ] Add `--since` option to Logs command (accepts duration string like "1h", "30m")
-- [ ] Refactor CLI into app.rs and commands/ structure
-  - [ ] Create `src/cli/app.rs` with Clap App definition
-  - [ ] Create `src/cli/commands/mod.rs` for command handler re-exports
-  - [ ] Create `src/cli/commands/daemon.rs` with handler stubs
-  - [ ] Create `src/cli/commands/status.rs` with handler stub
-  - [ ] Create `src/cli/commands/logs.rs` with handler stub
-  - [ ] Create `src/cli/commands/config.rs` with handler stubs
-  - [ ] Create `src/cli/commands/session.rs` with handler stubs (pause, resume, new-session)
-  - [ ] Update `src/cli/mod.rs` to re-export from app.rs and commands/
-- [ ] Implement main.rs command dispatch (AC: 1, 2, 3, 4)
-  - [ ] Add match arms for all commands
-  - [ ] Return appropriate exit codes
-  - [ ] Print "not implemented" messages for now (actual implementation in later stories)
-- [ ] Add unit tests for new commands
-  - [ ] Test new-session command parsing
-  - [ ] Test daemon status subcommand parsing
-  - [ ] Test logs --since option parsing
-- [ ] Add integration tests for CLI behavior (AC: 1, 2, 3, 4)
-  - [ ] Test `--help` output contains all required subcommands
-  - [ ] Test `--version` outputs semver format
-  - [ ] Test `daemon --help` lists all subcommands
-  - [ ] Test `logs --help` shows all options
+- [x] Add missing commands to CLI structure (AC: 1, 3)
+  - [x] Add `NewSession` command to Commands enum
+  - [x] Add `Status` variant to DaemonAction enum
+- [x] Add missing logs option (AC: 4)
+  - [x] Add `--since` option to Logs command (accepts duration string like "1h", "30m")
+- [x] Refactor CLI into app.rs and commands/ structure
+  - [x] Create `src/cli/app.rs` with Clap App definition
+  - [x] Create `src/cli/commands/mod.rs` for command handler re-exports
+  - [x] Create `src/cli/commands/daemon.rs` with handler stubs
+  - [x] Create `src/cli/commands/status.rs` with handler stub
+  - [x] Create `src/cli/commands/logs.rs` with handler stub
+  - [x] Create `src/cli/commands/config.rs` with handler stubs
+  - [x] Create `src/cli/commands/session.rs` with handler stubs (pause, resume, new-session)
+  - [x] Update `src/cli/mod.rs` to re-export from app.rs and commands/
+- [x] Implement main.rs command dispatch (AC: 1, 2, 3, 4)
+  - [x] Add match arms for all commands
+  - [x] Return appropriate exit codes
+  - [x] Print "not implemented" messages for now (actual implementation in later stories)
+- [x] Add unit tests for new commands
+  - [x] Test new-session command parsing
+  - [x] Test daemon status subcommand parsing
+  - [x] Test logs --since option parsing
+- [x] Add integration tests for CLI behavior (AC: 1, 2, 3, 4)
+  - [x] Test `--help` output contains all required subcommands
+  - [x] Test `--version` outputs semver format
+  - [x] Test `daemon --help` lists all subcommands
+  - [x] Test `logs --help` shows all options
 
 ## Dev Notes
 
@@ -254,15 +254,19 @@ From Story 1-1 Dev Notes:
 
 ### Agent Model Used
 
-(To be filled by implementing agent)
+openai/gpt-5.2-codex
 
 ### Debug Log References
 
-(To be filled during implementation)
+- cargo build
+- cargo test
+- rust-analyzer LSP diagnostics unavailable (tool error: unknown binary)
 
 ### Completion Notes List
 
-(To be filled during implementation)
+- Added new-session command, daemon status action, and logs --since option.
+- Refactored CLI definitions into app.rs and command handler modules with stubbed handlers.
+- Implemented main dispatch with exit code handling and added unit/integration tests for help/version and parsing.
 
 ### File List
 
@@ -277,6 +281,8 @@ From Story 1-1 Dev Notes:
 - `tests/cli_test.rs`
 
 **Files to modify:**
+- `_bmad-output/implementation-artifacts/1-2-cli-framework-with-clap-subcommands.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `src/cli/mod.rs` - Refactor to re-export from app.rs
 - `src/main.rs` - Update command dispatch
 
@@ -285,3 +291,4 @@ From Story 1-1 Dev Notes:
 | Date | Change |
 |------|--------|
 | 2026-02-05 | Story created from epics.md, status: ready-for-dev |
+| 2026-02-05 | Implemented clap refactor, command stubs, and CLI tests; marked story ready for review |
