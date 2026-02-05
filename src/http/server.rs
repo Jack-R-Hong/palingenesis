@@ -144,6 +144,8 @@ mod tests {
     use tower::ServiceExt;
     use tracing_subscriber::layer::SubscriberExt;
 
+    use crate::test_utils::TRACING_LOCK;
+
     #[derive(Clone)]
     struct BufferWriter {
         buffer: Arc<Mutex<Vec<u8>>>,
@@ -204,6 +206,14 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_bind_addr_returns_error() {
+        let result = HttpServer::new("not-an-ip", 7654, CancellationToken::new());
+        assert!(result.is_err());
+        let err_msg = result.err().unwrap().to_string();
+        assert!(err_msg.contains("Invalid HTTP bind address"));
+    }
+
+    #[test]
     fn test_custom_port_configuration() {
         let server = HttpServer::new("127.0.0.1", 9001, CancellationToken::new()).unwrap();
         assert_eq!(server.bind_addr().port(), 9001);
@@ -211,6 +221,7 @@ mod tests {
 
     #[test]
     fn test_binding_all_interfaces_warns() {
+        let _tracing = TRACING_LOCK.lock().unwrap();
         let (buffer, _guard) = capture_logs();
         let _server = HttpServer::new("0.0.0.0", 7654, CancellationToken::new()).unwrap();
         let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
@@ -246,6 +257,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_request_logging() {
+        let _tracing = TRACING_LOCK.lock().unwrap();
         let (buffer, _guard) = capture_logs();
         let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
         let response = server
@@ -273,10 +285,20 @@ mod tests {
             server.start().await.unwrap();
         });
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        let response = reqwest::get(format!("http://127.0.0.1:{port}/missing"))
-            .await
+        // Retry with backoff to avoid flaky tests on slow CI
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
             .unwrap();
+        let mut response = None;
+        for attempt in 0..10 {
+            tokio::time::sleep(Duration::from_millis(20 * (attempt + 1))).await;
+            if let Ok(resp) = client.get(format!("http://127.0.0.1:{port}/missing")).send().await {
+                response = Some(resp);
+                break;
+            }
+        }
+        let response = response.expect("Server should respond within retries");
         assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
 
         shutdown.cancel();

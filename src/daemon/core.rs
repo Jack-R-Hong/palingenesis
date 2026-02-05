@@ -91,10 +91,9 @@ impl Daemon {
                 Ok(Some(server)) => {
                     let server_cancel = cancel.clone();
                     let handle = tokio::spawn(async move {
-                        let error_cancel = server_cancel.clone();
                         if let Err(err) = server.start().await {
                             error!(error = %err, "HTTP server stopped with error");
-                            error_cancel.cancel();
+                            server_cancel.cancel();
                         }
                     });
                     self.http_handle = Some(handle);

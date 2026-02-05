@@ -214,6 +214,9 @@ fn log_non_reloadable_changes(old: &Config, new: &Config) {
     if old.daemon.socket_path != new.daemon.socket_path {
         warn!("Setting daemon.socket_path requires restart to take effect");
     }
+    if old.daemon.http_enabled != new.daemon.http_enabled {
+        warn!("Setting daemon.http_enabled requires restart to take effect");
+    }
     if old.daemon.http_bind != new.daemon.http_bind {
         warn!("Setting daemon.http_bind requires restart to take effect");
     }
