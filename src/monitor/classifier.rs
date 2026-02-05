@@ -4,10 +4,13 @@ use std::path::Path;
 use std::time::Duration;
 
 use regex::Regex;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 const DEFAULT_RETRY_WAIT_SECS: u64 = 30;
 const DEFAULT_MAX_LINES: usize = 100;
+const EXIT_CODE_SIGHUP: i32 = 129;
+const EXIT_CODE_SIGINT: i32 = 130;
+const EXIT_CODE_SIGTERM: i32 = 143;
 
 /// Reason why a session stopped.
 #[derive(Debug, Clone, PartialEq)]
@@ -17,11 +20,42 @@ pub enum StopReason {
     /// Session exhausted context window.
     ContextExhausted(Option<ContextExhaustionInfo>),
     /// User explicitly exited (Ctrl+C, exit command).
-    UserExit,
+    UserExit(UserExitInfo),
     /// Session completed successfully.
     Completed,
     /// Unknown or unclassifiable reason.
     Unknown(String),
+}
+
+impl StopReason {
+    /// Whether this stop reason should trigger auto-resume.
+    pub fn should_auto_resume(&self) -> bool {
+        match self {
+            StopReason::RateLimit(_) => true,
+            StopReason::ContextExhausted(_) => true,
+            StopReason::UserExit(_) => false,
+            StopReason::Completed => false,
+            StopReason::Unknown(_) => false,
+        }
+    }
+}
+
+/// Information about a user-initiated exit.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UserExitInfo {
+    pub exit_type: UserExitType,
+    pub exit_code: Option<i32>,
+    pub message: Option<String>,
+}
+
+/// Type of user exit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UserExitType {
+    CtrlC,
+    ExitCommand,
+    CleanExit,
+    TerminalClosed,
+    UserTerminated,
 }
 
 /// Information about a context exhaustion stop.
@@ -123,6 +157,7 @@ pub struct StopReasonClassifier {
     config: ClassifierConfig,
     rate_limit_patterns: Vec<Regex>,
     context_patterns: Vec<Regex>,
+    user_exit_patterns: Vec<Regex>,
 }
 
 impl StopReasonClassifier {
@@ -152,15 +187,18 @@ impl StopReasonClassifier {
             context_patterns.push(Regex::new(pattern)?);
         }
 
+        let user_exit_patterns = Self::build_user_exit_patterns()?;
+
         Ok(Self {
             config,
             rate_limit_patterns,
             context_patterns,
+            user_exit_patterns,
         })
     }
 
     /// Classify the stop reason from session file content.
-    pub fn classify(&self, session_path: &Path, _exit_code: Option<i32>) -> ClassificationResult {
+    pub fn classify(&self, session_path: &Path, exit_code: Option<i32>) -> ClassificationResult {
         let content = match self.read_file_tail(session_path, self.config.max_lines) {
             Ok(content) => content,
             Err(err) => {
@@ -173,19 +211,19 @@ impl StopReasonClassifier {
             }
         };
 
-        self.classify_with_session(&content, Some(session_path), _exit_code)
+        self.classify_with_session(&content, Some(session_path), exit_code)
     }
 
     /// Classify from raw content (for log analysis).
-    pub fn classify_content(&self, content: &str, _exit_code: Option<i32>) -> ClassificationResult {
-        self.classify_with_session(content, None, _exit_code)
+    pub fn classify_content(&self, content: &str, exit_code: Option<i32>) -> ClassificationResult {
+        self.classify_with_session(content, None, exit_code)
     }
 
     fn classify_with_session(
         &self,
         content: &str,
         session_path: Option<&Path>,
-        _exit_code: Option<i32>,
+        exit_code: Option<i32>,
     ) -> ClassificationResult {
         let mut evidence = Vec::new();
 
@@ -220,6 +258,16 @@ impl StopReasonClassifier {
             };
         }
 
+        if let Some(info) = self.detect_user_exit(content, exit_code, &mut evidence) {
+            info!(exit_type = ?info.exit_type, "Session ended by user, not auto-resuming");
+            let confidence = Self::confidence_from_evidence(&evidence, 0.75);
+            return ClassificationResult {
+                reason: StopReason::UserExit(info),
+                confidence,
+                evidence,
+            };
+        }
+
         ClassificationResult {
             reason: StopReason::Unknown("No matching patterns".to_string()),
             confidence: 0.2,
@@ -238,6 +286,19 @@ impl StopReasonClassifier {
             Regex::new(r"(?i)prompt\s+is\s+too\s+long")?,
             Regex::new(r"(?i)context\s+(?:truncated|reset)")?,
             Regex::new(r"(?i)conversation\s+reset")?,
+        ])
+    }
+
+    fn build_user_exit_patterns() -> Result<Vec<Regex>, ClassifierError> {
+        Ok(vec![
+            Regex::new(r"(?im)^\s*exit\s*$")?,
+            Regex::new(r"(?im)^\s*quit\s*$")?,
+            Regex::new(r"(?im)^\s*/bye\s*$")?,
+            Regex::new(r"(?im)^\s*goodbye\s*$")?,
+            Regex::new(r"(?im)^\s*done\s*$")?,
+            Regex::new(r"(?i)keyboard\s+interrupt")?,
+            Regex::new(r"(?i)interrupted\s+by\s+user")?,
+            Regex::new(r"(?i)sigint\s+received")?,
         ])
     }
 
@@ -280,6 +341,74 @@ impl StopReasonClassifier {
         None
     }
 
+    fn detect_user_exit(
+        &self,
+        content: &str,
+        exit_code: Option<i32>,
+        evidence: &mut Vec<String>,
+    ) -> Option<UserExitInfo> {
+        if let Some(code) = exit_code {
+            match code {
+                EXIT_CODE_SIGINT => {
+                    evidence.push("exit code 130 (SIGINT/Ctrl+C)".to_string());
+                    return Some(UserExitInfo {
+                        exit_type: UserExitType::CtrlC,
+                        exit_code: Some(code),
+                        message: Some("User pressed Ctrl+C".to_string()),
+                    });
+                }
+                EXIT_CODE_SIGTERM => {
+                    evidence.push("exit code 143 (SIGTERM)".to_string());
+                    return Some(UserExitInfo {
+                        exit_type: UserExitType::UserTerminated,
+                        exit_code: Some(code),
+                        message: Some("Process terminated".to_string()),
+                    });
+                }
+                EXIT_CODE_SIGHUP => {
+                    evidence.push("exit code 129 (SIGHUP)".to_string());
+                    return Some(UserExitInfo {
+                        exit_type: UserExitType::TerminalClosed,
+                        exit_code: Some(code),
+                        message: Some("Terminal closed".to_string()),
+                    });
+                }
+                0 => {
+                    // Handle clean exit after pattern checks below.
+                }
+                _ => {
+                    return None;
+                }
+            }
+        }
+
+        if self.has_error_indicators(content) {
+            return None;
+        }
+
+        for pattern in &self.user_exit_patterns {
+            if let Some(matched) = pattern.find(content) {
+                evidence.push(format!("matched user exit pattern: {}", matched.as_str()));
+                return Some(UserExitInfo {
+                    exit_type: UserExitType::ExitCommand,
+                    exit_code,
+                    message: Some(matched.as_str().to_string()),
+                });
+            }
+        }
+
+        if exit_code == Some(0) {
+            evidence.push("clean exit code 0".to_string());
+            return Some(UserExitInfo {
+                exit_type: UserExitType::CleanExit,
+                exit_code: Some(0),
+                message: None,
+            });
+        }
+
+        None
+    }
+
     fn extract_token_usage(&self, content: &str) -> Option<(f32, u32)> {
         let used_of_pattern = Regex::new(r"(?i)used\s+(\d{2,})\s+of\s+(\d{2,})\s+tokens").ok();
         if let Some(re) = used_of_pattern {
@@ -315,6 +444,13 @@ impl StopReasonClassifier {
         }
 
         None
+    }
+
+    fn has_error_indicators(&self, content: &str) -> bool {
+        let content_lower = content.to_lowercase();
+        ["error", "exception", "failed", "panic", "crash"]
+            .iter()
+            .any(|needle| content_lower.contains(needle))
     }
 
     fn infer_context_size(&self, content: &str) -> u32 {

@@ -2,7 +2,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use palingenesis::monitor::classifier::{
-    ClassifierConfig, RetryAfterSource, StopReason, StopReasonClassifier,
+    ClassifierConfig, RetryAfterSource, StopReason, StopReasonClassifier, UserExitInfo,
+    UserExitType,
 };
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -137,4 +138,78 @@ fn handles_read_errors_without_crashing() {
         other => panic!("expected unknown, got {other:?}"),
     }
     assert_eq!(result.confidence, 0.0);
+}
+
+#[test]
+fn detects_user_exit_ctrl_c_exit_code() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let path = fixture_path("user_exit_ctrl_c.txt");
+    let result = classifier.classify(&path, Some(130));
+
+    match result.reason {
+        StopReason::UserExit(info) => {
+            assert_eq!(info.exit_type, UserExitType::CtrlC);
+            assert_eq!(info.exit_code, Some(130));
+        }
+        other => panic!("expected user exit, got {other:?}"),
+    }
+}
+
+#[test]
+fn detects_user_exit_command_from_fixture() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let content = include_str!("fixtures/user_exit_command.txt");
+    let result = classifier.classify_content(content, None);
+
+    match result.reason {
+        StopReason::UserExit(info) => {
+            assert_eq!(info.exit_type, UserExitType::ExitCommand);
+            assert!(info.message.is_some());
+        }
+        other => panic!("expected user exit, got {other:?}"),
+    }
+}
+
+#[test]
+fn detects_clean_exit_without_errors() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let content = include_str!("fixtures/clean_exit.txt");
+    let result = classifier.classify_content(content, Some(0));
+
+    match result.reason {
+        StopReason::UserExit(info) => {
+            assert_eq!(info.exit_type, UserExitType::CleanExit);
+            assert_eq!(info.exit_code, Some(0));
+        }
+        other => panic!("expected user exit, got {other:?}"),
+    }
+}
+
+#[test]
+fn skips_user_exit_when_errors_present() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let content = "error: unexpected failure";
+    let result = classifier.classify_content(content, Some(0));
+
+    assert!(!matches!(result.reason, StopReason::UserExit(_)));
+}
+
+#[test]
+fn prioritizes_rate_limit_over_user_exit() {
+    let classifier = StopReasonClassifier::new().expect("classifier");
+    let content = "rate_limit_error: too many requests";
+    let result = classifier.classify_content(content, Some(130));
+
+    assert!(matches!(result.reason, StopReason::RateLimit(_)));
+}
+
+#[test]
+fn should_auto_resume_respects_user_exit() {
+    let reason = StopReason::UserExit(UserExitInfo {
+        exit_type: UserExitType::ExitCommand,
+        exit_code: None,
+        message: Some("exit".to_string()),
+    });
+
+    assert!(!reason.should_auto_resume());
 }

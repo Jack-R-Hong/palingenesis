@@ -1,0 +1,1 @@
+SIGINT received, terminating session.
