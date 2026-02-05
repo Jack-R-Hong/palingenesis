@@ -1,6 +1,6 @@
 # Story 2.1: File System Watcher Setup
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -48,70 +48,70 @@ So that I can detect session file modifications in real-time.
 
 ## Tasks / Subtasks
 
-- [ ] Create monitor module structure (AC: 1, 5, 6)
-  - [ ] Create `src/monitor/watcher.rs` with SessionWatcher struct
-  - [ ] Create `src/monitor/events.rs` with WatchEvent types
-  - [ ] Update `src/monitor/mod.rs` to export modules
+- [x] Create monitor module structure (AC: 1, 5, 6)
+  - [x] Create `src/monitor/watcher.rs` with SessionWatcher struct
+  - [x] Create `src/monitor/events.rs` with WatchEvent types
+  - [x] Update `src/monitor/mod.rs` to export modules
 
-- [ ] Define watcher event types (AC: 3)
-  - [ ] Define `WatchEvent` enum (FileCreated, FileModified, FileDeleted)
-  - [ ] Define `WatchError` enum with thiserror
-  - [ ] Implement event channel sender type alias
+- [x] Define watcher event types (AC: 3)
+  - [x] Define `WatchEvent` enum (FileCreated, FileModified, FileDeleted)
+  - [x] Define `WatchError` enum with thiserror
+  - [x] Implement event channel sender type alias
 
-- [ ] Implement SessionWatcher struct (AC: 1, 2)
-  - [ ] Define `WatcherError` enum (Io, NotifyError, DirectoryNotFound, AlreadyRunning)
-  - [ ] Implement `SessionWatcher::new()` with configurable session path
-  - [ ] Implement default path resolution (`~/.opencode/`)
-  - [ ] Implement `SessionWatcher::with_path()` for custom paths (testing)
+- [x] Implement SessionWatcher struct (AC: 1, 2)
+  - [x] Define `WatcherError` enum (Io, NotifyError, DirectoryNotFound, AlreadyRunning)
+  - [x] Implement `SessionWatcher::new()` with configurable session path
+  - [x] Implement default path resolution (`~/.opencode/`)
+  - [x] Implement `SessionWatcher::with_path()` for custom paths (testing)
 
-- [ ] Implement directory existence handling (AC: 2)
-  - [ ] Check if session directory exists on startup
-  - [ ] Log warning if directory doesn't exist
-  - [ ] Implement directory creation watcher (watch parent directory)
-  - [ ] Start recursive watch once directory appears
+- [x] Implement directory existence handling (AC: 2)
+  - [x] Check if session directory exists on startup
+  - [x] Log warning if directory doesn't exist
+  - [x] Implement directory creation watcher (watch parent directory)
+  - [x] Start recursive watch once directory appears
 
-- [ ] Implement file watcher core (AC: 1, 3)
-  - [ ] Use `notify::RecommendedWatcher` for cross-platform support
-  - [ ] Configure recursive watching mode
-  - [ ] Map notify events to WatchEvent types
-  - [ ] Send events via `tokio::sync::mpsc` channel
+- [x] Implement file watcher core (AC: 1, 3)
+  - [x] Use `notify::RecommendedWatcher` for cross-platform support
+  - [x] Configure recursive watching mode
+  - [x] Map notify events to WatchEvent types
+  - [x] Send events via `tokio::sync::mpsc` channel
 
-- [ ] Implement event debouncing (AC: 4)
-  - [ ] Create debounce buffer with 100ms window
-  - [ ] Use `tokio::time::interval` for debounce timing
-  - [ ] Coalesce multiple events for same file path
-  - [ ] Emit only latest state after debounce window
+- [x] Implement event debouncing (AC: 4)
+  - [x] Create debounce buffer with 100ms window
+  - [x] Use `tokio::time::interval` for debounce timing
+  - [x] Coalesce multiple events for same file path
+  - [x] Emit only latest state after debounce window
 
-- [ ] Implement graceful shutdown (AC: 5)
-  - [ ] Accept `CancellationToken` in `SessionWatcher::run()`
-  - [ ] Use `tokio::select!` for cancellation handling
-  - [ ] Drop notify watcher cleanly on cancellation
-  - [ ] Flush pending debounced events on shutdown
+- [x] Implement graceful shutdown (AC: 5)
+  - [x] Accept `CancellationToken` in `SessionWatcher::run()`
+  - [x] Use `tokio::select!` for cancellation handling
+  - [x] Drop notify watcher cleanly on cancellation
+  - [x] Flush pending debounced events on shutdown
 
-- [ ] Implement error handling (AC: 6)
-  - [ ] Handle transient I/O errors gracefully
-  - [ ] Log errors without crashing
-  - [ ] Implement retry logic for recoverable errors
-  - [ ] Report fatal errors via channel
+- [x] Implement error handling (AC: 6)
+  - [x] Handle transient I/O errors gracefully
+  - [x] Log errors without crashing
+  - [x] Implement retry logic for recoverable errors
+  - [x] Report fatal errors via channel
 
-- [ ] Integrate with daemon state access pattern (AC: 1, 3)
-  - [ ] Follow `DaemonStateAccess` trait pattern from Story 1.6
-  - [ ] Create `WatcherStateAccess` trait for watcher configuration
-  - [ ] Return event receiver channel for monitor integration
+- [x] Integrate with daemon state access pattern (AC: 1, 3)
+  - [x] Follow `DaemonStateAccess` trait pattern from Story 1.6
+  - [x] Create `WatcherStateAccess` trait for watcher configuration
+  - [x] Return event receiver channel for monitor integration
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test watcher creation with valid directory
-  - [ ] Test watcher behavior with missing directory
-  - [ ] Test file change event emission
-  - [ ] Test event debouncing (multiple rapid changes)
-  - [ ] Test graceful shutdown with CancellationToken
-  - [ ] Test error recovery on transient failures
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test watcher creation with valid directory
+  - [x] Test watcher behavior with missing directory
+  - [x] Test file change event emission
+  - [x] Test event debouncing (multiple rapid changes)
+  - [x] Test graceful shutdown with CancellationToken
+  - [x] Test error recovery on transient failures
 
-- [ ] Add integration tests
-  - [ ] Test full watcher lifecycle (start, watch, stop)
-  - [ ] Test recursive directory watching
-  - [ ] Test watching for new directory creation
-  - [ ] Test high-frequency file change scenarios
+- [x] Add integration tests
+  - [x] Test full watcher lifecycle (start, watch, stop)
+  - [x] Test recursive directory watching
+  - [x] Test watching for new directory creation
+  - [x] Test high-frequency file change scenarios
 
 ## Dev Notes
 
@@ -431,6 +431,29 @@ From Story 1.4 (State Persistence Layer):
 - [Source: _bmad-output/planning-artifacts/architecture.md#Requirements to Module Mapping]
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 2.1: File System Watcher Setup]
 
+## Dev Agent Record
+
+### Agent Model Used
+
+openai/gpt-5.2-codex
+
+### Implementation Plan
+
+- Add monitor watcher/events modules with notify-debouncer-full, mpsc integration, and core event filtering.
+- Implement directory creation waiting, debounced emission, and cancellation-aware shutdown.
+- Add unit and integration tests for watcher lifecycle, recursion, debouncing, and shutdown behavior.
+
+### Debug Log References
+
+- `cargo build`
+- `cargo test`
+
+### Completion Notes List
+
+- Implemented SessionWatcher with debounced notify pipeline, directory creation waiting, and cancellation handling.
+- Added WatchEvent/WatchError types plus WatcherStateAccess trait for daemon integration.
+- Added unit and integration tests covering creation, recursion, debouncing, and shutdown behavior.
+
 ## File List
 
 **Files to create:**
@@ -439,10 +462,14 @@ From Story 1.4 (State Persistence Layer):
 - `tests/watcher_test.rs`
 
 **Files to modify:**
-- `src/monitor/mod.rs` - Export watcher and events modules
-- `src/lib.rs` - Ensure monitor module is public if needed
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` - Update story status
+- `Cargo.toml`
+- `Cargo.lock`
+- `src/monitor/mod.rs`
+- `_bmad-output/implementation-artifacts/2-1-file-system-watcher-setup.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `logs/tasks/2026-02-05.jsonl`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented session watcher with debouncing, added tests, and updated sprint status
