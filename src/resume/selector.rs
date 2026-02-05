@@ -5,6 +5,7 @@ use crate::monitor::classifier::StopReason;
 use crate::resume::context::ResumeContext;
 use crate::resume::error::ResumeError;
 use crate::resume::outcome::ResumeOutcome;
+use crate::resume::same_session::SameSessionStrategy;
 use crate::resume::strategy::ResumeStrategy;
 
 #[derive(Debug, Clone, Copy)]
@@ -59,28 +60,6 @@ impl StrategySelector {
 impl Default for StrategySelector {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct SameSessionStrategy;
-
-impl SameSessionStrategy {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-#[async_trait]
-impl ResumeStrategy for SameSessionStrategy {
-    async fn execute(&self, _ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
-        Ok(ResumeOutcome::skipped(
-            "same-session strategy not implemented",
-        ))
-    }
-
-    fn name(&self) -> &'static str {
-        "SameSessionStrategy"
     }
 }
 
