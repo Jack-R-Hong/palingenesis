@@ -303,6 +303,10 @@ Both approaches:
 - src/lib.rs
 - src/notify/events.rs
 - tests/bot_integration.rs
+- _bmad-output/implementation-artifacts/6-6-discord-slack-bot-commands.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- logs/tasks/2026-02-06.jsonl
 
 ## Change Log
 - 2026-02-06: Added bot webhook handling, authorization, config schema updates, and tests.
+- 2026-02-06: Documented sprint status and task log updates in file list.
