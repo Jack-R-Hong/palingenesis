@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod bot;
 pub mod config;
 pub mod daemon;
 pub mod http;
