@@ -1,6 +1,6 @@
 # Story 1.6: Unix Socket IPC Server
 
-Status: review
+Status: done
 
 ## Story
 
@@ -654,3 +654,4 @@ openai/gpt-5.2-codex
 
 - 2026-02-05: Story created and marked ready-for-dev
 - 2026-02-05: Implemented Unix socket IPC server, protocol, and tests; verified build/test/clippy
+- 2026-02-05: Code review completed - fixed 5 issues: removed dead code (IpcError::Protocol), replaced eprintln with tracing::warn, added documentation comment, added STATUS and unknown command unit tests. Marked done.
