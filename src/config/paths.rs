@@ -8,6 +8,9 @@ pub struct Paths;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PathError {
+    #[error("Home directory not found")]
+    HomeNotFound,
+
     #[error("Failed to create directory {path}: {source}")]
     CreateDirectory { path: PathBuf, source: io::Error },
 }
@@ -16,34 +19,38 @@ impl Paths {
     /// Returns the configuration directory path.
     /// - Linux: ~/.config/palingenesis/
     /// - macOS: ~/Library/Application Support/palingenesis/
-    /// - Override: PALINGENESIS_CONFIG env var (directory)
+    /// - Override: PALINGENESIS_CONFIG env var (directory derived from file path)
     pub fn config_dir() -> PathBuf {
         if let Ok(path) = env::var("PALINGENESIS_CONFIG") {
             let path = PathBuf::from(path);
-            return path.parent().map(PathBuf::from).unwrap_or(path);
+            return path
+                .parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .map(PathBuf::from)
+                .unwrap_or(path);
         }
 
         #[cfg(target_os = "linux")]
         {
-            return dirs::config_dir()
+            dirs::config_dir()
                 .or_else(|| dirs::home_dir().map(|home| home.join(".config")))
                 .unwrap_or_else(|| PathBuf::from(".config"))
-                .join("palingenesis");
+                .join("palingenesis")
         }
 
         #[cfg(target_os = "macos")]
         {
-            return dirs::config_dir()
+            dirs::config_dir()
                 .or_else(|| {
                     dirs::home_dir().map(|home| home.join("Library").join("Application Support"))
                 })
                 .unwrap_or_else(|| PathBuf::from("~/Library/Application Support"))
-                .join("palingenesis");
+                .join("palingenesis")
         }
 
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
-            return PathBuf::from(".palingenesis");
+            PathBuf::from(".palingenesis")
         }
     }
 
@@ -58,7 +65,7 @@ impl Paths {
     /// Returns the state directory path.
     /// - Linux: ~/.local/state/palingenesis/
     /// - macOS: ~/Library/Application Support/palingenesis/
-    /// - Override: PALINGENESIS_STATE env var (directory)
+    /// - Override: PALINGENESIS_STATE env var
     pub fn state_dir() -> PathBuf {
         if let Ok(path) = env::var("PALINGENESIS_STATE") {
             return PathBuf::from(path);
@@ -66,45 +73,50 @@ impl Paths {
 
         #[cfg(target_os = "linux")]
         {
-            return dirs::state_dir()
+            dirs::state_dir()
                 .or_else(|| dirs::home_dir().map(|home| home.join(".local/state")))
                 .unwrap_or_else(|| PathBuf::from(".local/state"))
-                .join("palingenesis");
+                .join("palingenesis")
         }
 
         #[cfg(target_os = "macos")]
         {
-            return Self::config_dir();
+            Self::config_dir()
         }
 
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
-            return PathBuf::from(".palingenesis");
+            PathBuf::from(".palingenesis")
         }
     }
 
     /// Returns the runtime directory path (for PID file, Unix socket).
     /// - Linux: /run/user/{uid}/palingenesis/
     /// - macOS: /tmp/palingenesis-{uid}/
+    /// - Override: PALINGENESIS_RUNTIME env var
     pub fn runtime_dir() -> PathBuf {
+        if let Ok(path) = env::var("PALINGENESIS_RUNTIME") {
+            return PathBuf::from(path);
+        }
+
         #[cfg(target_os = "linux")]
         {
             let runtime_root = dirs::runtime_dir().unwrap_or_else(|| {
                 let uid = unsafe { libc::getuid() };
                 PathBuf::from(format!("/run/user/{uid}"))
             });
-            return runtime_root.join("palingenesis");
+            runtime_root.join("palingenesis")
         }
 
         #[cfg(target_os = "macos")]
         {
             let uid = unsafe { libc::getuid() };
-            return PathBuf::from(format!("/tmp/palingenesis-{uid}"));
+            PathBuf::from(format!("/tmp/palingenesis-{uid}"))
         }
 
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
-            return PathBuf::from(".palingenesis/run");
+            PathBuf::from(".palingenesis/run")
         }
     }
 
@@ -261,6 +273,7 @@ mod tests {
     #[cfg(target_os = "linux")]
     fn test_runtime_dir_uses_xdg_runtime_dir() {
         let _lock = ENV_LOCK.lock().unwrap();
+        remove_env_var("PALINGENESIS_RUNTIME");
         let temp = tempfile::tempdir().unwrap();
         set_env_var("XDG_RUNTIME_DIR", temp.path());
 
@@ -268,5 +281,16 @@ mod tests {
         assert!(runtime_dir.starts_with(temp.path()));
 
         remove_env_var("XDG_RUNTIME_DIR");
+    }
+
+    #[test]
+    fn test_env_override_runtime_dir() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let runtime_path = temp.path().join("runtime");
+
+        set_env_var("PALINGENESIS_RUNTIME", &runtime_path);
+        assert_eq!(Paths::runtime_dir(), runtime_path);
+        remove_env_var("PALINGENESIS_RUNTIME");
     }
 }

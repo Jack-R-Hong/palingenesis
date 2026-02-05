@@ -1,6 +1,6 @@
 # Story 1.3: Platform-Specific Path Resolution
 
-Status: review
+Status: done
 
 ## Story
 
