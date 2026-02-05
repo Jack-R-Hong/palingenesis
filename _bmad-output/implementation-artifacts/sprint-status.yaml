@@ -44,7 +44,7 @@ development_status:
   # Epic 2: Session Detection & Classification
   epic-2: in-progress
   2-1-file-system-watcher-setup: done
-  2-2-session-file-parser-frontmatter-extraction: backlog
+  2-2-session-file-parser-frontmatter-extraction: ready-for-dev
   2-3-process-detection-opencode-start-stop: backlog
   2-4-stop-reason-classification-rate-limit: backlog
   2-5-stop-reason-classification-context-exhaustion: backlog
