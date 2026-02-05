@@ -63,3 +63,4 @@ systemd = ["dep:systemd"]
 tempfile = "3.18"
 assert_cmd = "2.0"
 predicates = "3.1"
+tokio = { version = "1.49", features = ["test-util", "macros", "rt-multi-thread"] }

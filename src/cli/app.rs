@@ -15,7 +15,11 @@ pub enum Commands {
         action: DaemonAction,
     },
     /// Show daemon status
-    Status,
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// View daemon logs
     Logs {
         /// Follow log output
@@ -56,7 +60,11 @@ pub enum DaemonAction {
     /// Reload configuration
     Reload,
     /// Show daemon status
-    Status,
+    Status {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -158,16 +166,47 @@ mod tests {
         let cli = Cli::try_parse_from(["palingenesis", "daemon", "status"]).unwrap();
         match cli.command {
             Some(Commands::Daemon {
-                action: DaemonAction::Status,
-            }) => {}
+                action: DaemonAction::Status { json },
+            }) => {
+                assert!(!json);
+            }
             _ => panic!("Expected Daemon Status command"),
+        }
+    }
+
+    #[test]
+    fn test_daemon_status_command_with_json() {
+        let cli = Cli::try_parse_from(["palingenesis", "daemon", "status", "--json"]).unwrap();
+        match cli.command {
+            Some(Commands::Daemon {
+                action: DaemonAction::Status { json },
+            }) => {
+                assert!(json);
+            }
+            _ => panic!("Expected Daemon Status command with json flag"),
         }
     }
 
     #[test]
     fn test_status_command() {
         let cli = Cli::try_parse_from(["palingenesis", "status"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Status)));
+        match cli.command {
+            Some(Commands::Status { json }) => {
+                assert!(!json);
+            }
+            _ => panic!("Expected Status command"),
+        }
+    }
+
+    #[test]
+    fn test_status_command_with_json() {
+        let cli = Cli::try_parse_from(["palingenesis", "status", "--json"]).unwrap();
+        match cli.command {
+            Some(Commands::Status { json }) => {
+                assert!(json);
+            }
+            _ => panic!("Expected Status command with json flag"),
+        }
     }
 
     #[test]

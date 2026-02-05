@@ -1,14 +1,69 @@
+use tracing::warn;
+
+use crate::daemon::Daemon;
+use crate::telemetry::tracing::{init_tracing, TracingConfig};
+
 pub async fn handle_start(foreground: bool) -> anyhow::Result<()> {
-    if foreground {
-        println!("daemon start (foreground) not implemented (Story 1.8)");
-    } else {
-        println!("daemon start not implemented (Story 1.8)");
+    if !foreground {
+        let config = TracingConfig {
+            log_to_file: false,
+            log_to_stderr: true,
+            ..TracingConfig::default()
+        };
+        let _guard = init_tracing(&config)?;
+        warn!("Daemonization not yet implemented (daemonize crate required)");
+        return Ok(());
     }
+
+    let config = TracingConfig {
+        log_to_file: false,
+        log_to_stderr: true,
+        ..TracingConfig::default()
+    };
+    let _guard = init_tracing(&config)?;
+
+    let mut daemon = Daemon::new();
+    daemon.run().await?;
     Ok(())
 }
 
 pub async fn handle_stop() -> anyhow::Result<()> {
-    println!("daemon stop not implemented (Story 1.9)");
+    use std::thread;
+    use std::time::Duration;
+    use nix::sys::signal::{kill, Signal};
+    use nix::unistd::Pid;
+    use crate::daemon::pid::PidFile;
+
+    let pid_file = PidFile::new();
+
+    let pid = match pid_file.read() {
+        Ok(pid) => pid,
+        Err(_) => {
+            println!("Daemon not running");
+            return Ok(());
+        }
+    };
+
+    if !PidFile::is_process_running(pid)? {
+        println!("Daemon not running");
+        return Ok(());
+    }
+
+    println!("Stopping daemon (PID: {})...", pid);
+
+    let nix_pid = Pid::from_raw(pid as i32);
+    kill(nix_pid, Signal::SIGTERM)?;
+
+    for _ in 0..50 {
+        thread::sleep(Duration::from_millis(100));
+        if !PidFile::is_process_running(pid)? {
+            println!("Daemon stopped");
+            return Ok(());
+        }
+    }
+
+    kill(nix_pid, Signal::SIGKILL)?;
+    println!("Daemon stopped");
     Ok(())
 }
 
@@ -22,7 +77,6 @@ pub async fn handle_reload() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn handle_status() -> anyhow::Result<()> {
-    println!("daemon status not implemented (Story 1.10)");
-    Ok(())
+pub async fn handle_status(json: bool) -> anyhow::Result<()> {
+    super::status::handle_status(json).await
 }

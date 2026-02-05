@@ -16,9 +16,9 @@ async fn main() -> anyhow::Result<()> {
             DaemonAction::Stop => commands::daemon::handle_stop().await,
             DaemonAction::Restart => commands::daemon::handle_restart().await,
             DaemonAction::Reload => commands::daemon::handle_reload().await,
-            DaemonAction::Status => commands::daemon::handle_status().await,
+            DaemonAction::Status { json } => commands::daemon::handle_status(json).await,
         },
-        Some(Commands::Status) => commands::status::handle_status().await,
+        Some(Commands::Status { json }) => commands::status::handle_status(json).await,
         Some(Commands::Logs {
             follow,
             tail,
