@@ -335,7 +335,7 @@ impl ResumeStrategy for NewSessionStrategy {
         name = "resume.new_session",
         skip(self, ctx),
         fields(
-            stop_reason = %ctx.stop_reason,
+            stop_reason = ?ctx.stop_reason,
             wait_duration_ms = tracing::field::Empty,
             outcome = tracing::field::Empty,
         )
