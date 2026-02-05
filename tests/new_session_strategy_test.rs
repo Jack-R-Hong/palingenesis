@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use palingenesis::monitor::classifier::StopReason;
 use palingenesis::monitor::session::{Session, SessionState, StepValue};
 use palingenesis::resume::{
-    BackupHandler, NewSessionConfig, NewSessionStrategy, ResumeContext, ResumeError,
+    BackupError, BackupHandler, NewSessionConfig, NewSessionStrategy, ResumeContext, ResumeError,
     ResumeOutcome, ResumeStrategy, SessionCreator,
 };
 use palingenesis::state::StateStore;
@@ -21,10 +21,13 @@ struct TestBackup {
 
 #[async_trait]
 impl BackupHandler for TestBackup {
-    async fn backup(&self, _session_path: &Path) -> Result<PathBuf, ResumeError> {
+    async fn backup(&self, _session_path: &Path) -> Result<PathBuf, BackupError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         if self.should_fail {
-            return Err(ResumeError::Config("backup failed".to_string()));
+            return Err(BackupError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "backup failed",
+            )));
         }
         Ok(PathBuf::from("/tmp/backup.md"))
     }

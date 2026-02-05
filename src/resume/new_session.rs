@@ -7,6 +7,7 @@ use tokio::fs;
 use tracing::{debug, info, warn};
 
 use crate::monitor::session::{Session, StepValue};
+use crate::resume::backup::{BackupConfig, BackupHandler, SessionBackup};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
 use crate::state::{CurrentSession, StateStore};
 
@@ -21,6 +22,10 @@ pub struct NewSessionConfig {
     pub enable_backup: bool,
     /// Maximum backups to keep.
     pub max_backups: usize,
+    /// Timestamp format for backup filenames.
+    pub backup_timestamp_format: String,
+    /// Verify backup after creation.
+    pub verify_backup: bool,
 }
 
 impl Default for NewSessionConfig {
@@ -31,6 +36,8 @@ impl Default for NewSessionConfig {
                 .to_string(),
             enable_backup: true,
             max_backups: 10,
+            backup_timestamp_format: "%Y%m%d-%H%M%S".to_string(),
+            verify_backup: true,
         }
     }
 }
@@ -44,30 +51,6 @@ pub struct NextStepInfo {
     pub description: String,
     /// Full content of Next-step.md.
     pub raw_content: String,
-}
-
-#[async_trait]
-pub trait BackupHandler: Send + Sync {
-    async fn backup(&self, session_path: &Path) -> Result<PathBuf, ResumeError>;
-}
-
-#[derive(Debug, Clone)]
-pub struct SessionBackup {
-    max_backups: usize,
-}
-
-impl SessionBackup {
-    pub fn new(max_backups: usize) -> Self {
-        Self { max_backups }
-    }
-}
-
-#[async_trait]
-impl BackupHandler for SessionBackup {
-    async fn backup(&self, session_path: &Path) -> Result<PathBuf, ResumeError> {
-        let _ = self.max_backups;
-        Ok(session_path.to_path_buf())
-    }
 }
 
 #[async_trait]
@@ -121,16 +104,26 @@ pub struct NewSessionStrategy {
 impl NewSessionStrategy {
     pub fn new() -> Self {
         let config = NewSessionConfig::default();
+        let backup_config = BackupConfig {
+            max_backups: config.max_backups,
+            timestamp_format: config.backup_timestamp_format.clone(),
+            verify_backup: config.verify_backup,
+        };
         Self {
-            backup: Arc::new(SessionBackup::new(config.max_backups)),
+            backup: Arc::new(SessionBackup::with_config(backup_config)),
             creator: Arc::new(CommandSessionCreator),
             config,
         }
     }
 
     pub fn with_config(config: NewSessionConfig) -> Self {
+        let backup_config = BackupConfig {
+            max_backups: config.max_backups,
+            timestamp_format: config.backup_timestamp_format.clone(),
+            verify_backup: config.verify_backup,
+        };
         Self {
-            backup: Arc::new(SessionBackup::new(config.max_backups)),
+            backup: Arc::new(SessionBackup::with_config(backup_config)),
             creator: Arc::new(CommandSessionCreator),
             config,
         }
@@ -298,6 +291,7 @@ impl NewSessionStrategy {
 
         Ok(())
     }
+
 }
 
 #[async_trait]
@@ -315,7 +309,7 @@ impl ResumeStrategy for NewSessionStrategy {
                     info!(backup = %backup_path.display(), "Session backed up");
                 }
                 Err(err) => {
-                    warn!(error = %err, "Session backup failed, proceeding anyway");
+                    warn!("Failed to backup session: {}", err);
                 }
             }
         }
