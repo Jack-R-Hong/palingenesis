@@ -1,6 +1,6 @@
 # Story 1.2: CLI Framework with Clap Subcommands
 
-Status: review
+Status: done
 
 ## Story
 

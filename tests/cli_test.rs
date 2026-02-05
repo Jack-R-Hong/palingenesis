@@ -1,3 +1,7 @@
+// Allow deprecated cargo_bin - the deprecation is for custom build-dir edge case
+// which doesn't apply to this project. See: https://docs.rs/assert_cmd
+#![allow(deprecated)]
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 
