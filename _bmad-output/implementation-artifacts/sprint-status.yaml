@@ -90,7 +90,7 @@ development_status:
   epic-6: in-progress
   6-1-http-api-server-setup: done
   6-2-health-endpoint: done
-  6-3-status-api-endpoint: review
+  6-3-status-api-endpoint: done
   6-4-control-api-endpoints: backlog
   6-5-events-sse-stream: backlog
   6-6-discord-slack-bot-commands: backlog
