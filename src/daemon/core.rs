@@ -87,7 +87,7 @@ impl Daemon {
         }
 
         if let Some(config) = self.state.daemon_config() {
-            match HttpServer::from_config(&config, cancel.clone()) {
+            match HttpServer::from_config(&config, cancel.clone(), Arc::clone(&self.state)) {
                 Ok(Some(server)) => {
                     let server_cancel = cancel.clone();
                     let handle = tokio::spawn(async move {

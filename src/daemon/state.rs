@@ -41,6 +41,10 @@ impl DaemonState {
         self.start_time.elapsed()
     }
 
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::SeqCst)
+    }
+
     pub fn daemon_config(&self) -> Option<crate::config::schema::DaemonConfig> {
         match self.config.read() {
             Ok(guard) => Some(guard.daemon.clone()),
