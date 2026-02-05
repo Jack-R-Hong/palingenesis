@@ -63,7 +63,7 @@ development_status:
   3-7-pause-command-implementation: done
   3-8-resume-command-implementation: done
   3-9-force-new-session-command: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Configuration Management
   epic-4: backlog
