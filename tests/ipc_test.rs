@@ -39,6 +39,10 @@ impl DaemonStateAccess for MockState {
         Ok(())
     }
 
+    fn new_session(&self) -> Result<(), String> {
+        Ok(())
+    }
+
     fn reload_config(&self) -> Result<(), String> {
         Ok(())
     }

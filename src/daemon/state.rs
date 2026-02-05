@@ -63,6 +63,11 @@ impl DaemonStateAccess for DaemonState {
         Ok(())
     }
 
+    fn new_session(&self) -> Result<(), String> {
+        self.sessions_count.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+
     fn reload_config(&self) -> Result<(), String> {
         Ok(())
     }

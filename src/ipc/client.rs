@@ -134,11 +134,19 @@ impl IpcClient {
         Self::expect_ok(response)
     }
 
+    /// Force a new session.
+    pub async fn new_session() -> Result<(), IpcClientError> {
+        let mut client = Self::connect().await?;
+        let response = client.send_command(IpcCommand::NewSession).await?;
+        Self::expect_ok(response)
+    }
+
     fn command_text(cmd: &IpcCommand) -> &'static str {
         match cmd {
             IpcCommand::Status => "STATUS\n",
             IpcCommand::Pause => "PAUSE\n",
             IpcCommand::Resume => "RESUME\n",
+            IpcCommand::NewSession => "NEW_SESSION\n",
             IpcCommand::Reload => "RELOAD\n",
         }
     }
@@ -212,6 +220,7 @@ mod tests {
     struct MockState {
         paused: AtomicBool,
         reloads: AtomicUsize,
+        new_sessions: AtomicUsize,
     }
 
     impl MockState {
@@ -221,6 +230,10 @@ mod tests {
 
         fn reload_count(&self) -> usize {
             self.reloads.load(Ordering::SeqCst)
+        }
+
+        fn new_session_count(&self) -> usize {
+            self.new_sessions.load(Ordering::SeqCst)
         }
     }
 
@@ -251,6 +264,11 @@ mod tests {
 
         fn reload_config(&self) -> Result<(), String> {
             self.reloads.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        fn new_session(&self) -> Result<(), String> {
+            self.new_sessions.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
     }
@@ -357,6 +375,9 @@ mod tests {
 
         IpcClient::reload().await.unwrap();
         assert_eq!(state.reload_count(), 1);
+
+        IpcClient::new_session().await.unwrap();
+        assert_eq!(state.new_session_count(), 1);
 
         cancel.cancel();
         remove_env_var("PALINGENESIS_RUNTIME");

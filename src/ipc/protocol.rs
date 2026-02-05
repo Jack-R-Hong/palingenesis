@@ -9,6 +9,8 @@ pub enum IpcCommand {
     Pause,
     /// Resume session monitoring.
     Resume,
+    /// Force a new session.
+    NewSession,
     /// Reload configuration file.
     Reload,
 }
@@ -20,6 +22,7 @@ impl IpcCommand {
             "STATUS" => Some(Self::Status),
             "PAUSE" => Some(Self::Pause),
             "RESUME" => Some(Self::Resume),
+            "NEW_SESSION" | "NEW-SESSION" => Some(Self::NewSession),
             "RELOAD" => Some(Self::Reload),
             _ => None,
         }
@@ -72,6 +75,14 @@ mod tests {
         assert_eq!(IpcCommand::parse("status\n"), Some(IpcCommand::Status));
         assert_eq!(IpcCommand::parse("PAUSE"), Some(IpcCommand::Pause));
         assert_eq!(IpcCommand::parse("RESUME"), Some(IpcCommand::Resume));
+        assert_eq!(
+            IpcCommand::parse("NEW_SESSION"),
+            Some(IpcCommand::NewSession)
+        );
+        assert_eq!(
+            IpcCommand::parse("NEW-SESSION"),
+            Some(IpcCommand::NewSession)
+        );
         assert_eq!(IpcCommand::parse("RELOAD"), Some(IpcCommand::Reload));
         assert_eq!(IpcCommand::parse("UNKNOWN"), None);
     }

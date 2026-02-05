@@ -32,6 +32,7 @@ pub trait DaemonStateAccess: Send + Sync {
     fn get_status(&self) -> DaemonStatus;
     fn pause(&self) -> Result<(), String>;
     fn resume(&self) -> Result<(), String>;
+    fn new_session(&self) -> Result<(), String>;
     fn reload_config(&self) -> Result<(), String>;
 }
 
@@ -206,6 +207,10 @@ fn handle_command<S: DaemonStateAccess>(cmd: IpcCommand, state: &S) -> IpcRespon
             Ok(()) => IpcResponse::Ok,
             Err(msg) => IpcResponse::Error { message: msg },
         },
+        IpcCommand::NewSession => match state.new_session() {
+            Ok(()) => IpcResponse::Ok,
+            Err(msg) => IpcResponse::Error { message: msg },
+        },
         IpcCommand::Reload => match state.reload_config() {
             Ok(()) => IpcResponse::Ok,
             Err(msg) => IpcResponse::Error { message: msg },
@@ -224,6 +229,7 @@ mod tests {
     struct MockState {
         paused: AtomicBool,
         reloads: AtomicUsize,
+        new_sessions: AtomicUsize,
     }
 
     impl MockState {
@@ -233,6 +239,10 @@ mod tests {
 
         fn reload_count(&self) -> usize {
             self.reloads.load(Ordering::SeqCst)
+        }
+
+        fn new_session_count(&self) -> usize {
+            self.new_sessions.load(Ordering::SeqCst)
         }
     }
 
@@ -263,6 +273,11 @@ mod tests {
 
         fn reload_config(&self) -> Result<(), String> {
             self.reloads.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        fn new_session(&self) -> Result<(), String> {
+            self.new_sessions.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
     }
@@ -345,6 +360,18 @@ mod tests {
         reader.read_line(&mut response).await.unwrap();
         assert_eq!(response, "OK\n");
         assert_eq!(state.reload_count(), 1);
+
+        let stream = UnixStream::connect(&sock_path).await.unwrap();
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        writer.write_all(b"NEW_SESSION\n").await.unwrap();
+        writer.flush().await.unwrap();
+
+        response.clear();
+        reader.read_line(&mut response).await.unwrap();
+        assert_eq!(response, "OK\n");
+        assert_eq!(state.new_session_count(), 1);
 
         cancel.cancel();
         server_task.await.unwrap().unwrap();

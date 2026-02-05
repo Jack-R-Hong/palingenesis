@@ -53,15 +53,35 @@ pub async fn handle_resume() -> anyhow::Result<()> {
 }
 
 pub async fn handle_new_session() -> anyhow::Result<()> {
-    println!("new-session not implemented (Story 3.9)");
-    Ok(())
+    match IpcClient::new_session().await {
+        Ok(()) => {
+            println!("New session started");
+            Ok(())
+        }
+        Err(IpcClientError::NotRunning) => {
+            eprintln!("Daemon not running");
+            std::process::exit(1);
+        }
+        Err(IpcClientError::Timeout) => {
+            eprintln!("Daemon unresponsive");
+            std::process::exit(1);
+        }
+        Err(IpcClientError::Protocol(message)) => {
+            if message.eq_ignore_ascii_case("No active session to replace") {
+                eprintln!("No active session to replace");
+                std::process::exit(1);
+            }
+            Err(IpcClientError::Protocol(message).into())
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
     use tempfile::tempdir;
     use tokio_util::sync::CancellationToken;
@@ -73,11 +93,16 @@ mod tests {
     #[derive(Default)]
     struct MockState {
         paused: AtomicBool,
+        new_sessions: AtomicUsize,
     }
 
     impl MockState {
         fn is_paused(&self) -> bool {
             self.paused.load(Ordering::SeqCst)
+        }
+
+        fn new_session_count(&self) -> usize {
+            self.new_sessions.load(Ordering::SeqCst)
         }
     }
 
@@ -112,6 +137,7 @@ mod tests {
         }
 
         fn new_session(&self) -> Result<(), String> {
+            self.new_sessions.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
 
@@ -146,7 +172,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_pause_and_resume() {
+    async fn test_handle_pause_resume_new_session() {
         let _lock = ENV_LOCK.lock().unwrap();
         let temp = tempdir().unwrap();
         set_env_var("PALINGENESIS_RUNTIME", temp.path());
@@ -158,6 +184,8 @@ mod tests {
         assert!(state.is_paused());
         handle_resume().await.unwrap();
         assert!(!state.is_paused());
+        handle_new_session().await.unwrap();
+        assert_eq!(state.new_session_count(), 1);
 
         cancel.cancel();
         remove_env_var("PALINGENESIS_RUNTIME");
