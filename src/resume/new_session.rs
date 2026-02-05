@@ -291,6 +291,7 @@ impl NewSessionStrategy {
         let mut state = store.load();
 
         state.stats.total_resumes = state.stats.total_resumes.saturating_add(1);
+        state.stats.saves_count = state.stats.saves_count.saturating_add(1);
         state.stats.last_resume = Some(Utc::now());
         state.current_session = Some(self.build_current_session(ctx, new_session_path, next_step));
 
@@ -302,6 +303,7 @@ impl NewSessionStrategy {
             .map_err(|err| ResumeError::Config(format!("state store error: {err}")))?;
 
         if let Some(metrics) = metrics {
+            metrics.record_save();
             metrics.record_time_saved(calculation.total_saved_seconds);
         }
 
