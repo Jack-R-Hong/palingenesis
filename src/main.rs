@@ -28,7 +28,11 @@ async fn main() -> anyhow::Result<()> {
             ConfigAction::Init { force, path } => {
                 commands::config::handle_init(force, path).await
             }
-            ConfigAction::Show => commands::config::handle_show().await,
+            ConfigAction::Show {
+                json,
+                section,
+                effective,
+            } => commands::config::handle_show(json, section, effective).await,
             ConfigAction::Validate => commands::config::handle_validate().await,
             ConfigAction::Edit => commands::config::handle_edit().await,
         },

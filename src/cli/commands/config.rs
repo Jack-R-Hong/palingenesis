@@ -1,7 +1,12 @@
+use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+use anyhow::Context;
+use serde::Serialize;
+
+use crate::config::schema::{Config, DiscordConfig, NtfyConfig, SlackConfig, WebhookConfig};
 use crate::config::Paths;
 
 pub async fn handle_init(force: bool, custom_path: Option<PathBuf>) -> anyhow::Result<()> {
@@ -32,8 +37,43 @@ pub async fn handle_init(force: bool, custom_path: Option<PathBuf>) -> anyhow::R
     Ok(())
 }
 
-pub async fn handle_show() -> anyhow::Result<()> {
-    println!("config show not implemented (Story 4.3)");
+pub async fn handle_show(
+    json: bool,
+    section: Option<String>,
+    effective: bool,
+) -> anyhow::Result<()> {
+    let config_path = Paths::config_file();
+    let using_defaults = !config_path.exists();
+
+    let mut config = if using_defaults {
+        Config::default()
+    } else {
+        load_config_from_path(&config_path)?
+    };
+
+    if effective {
+        let overrides = apply_env_overrides(&mut config)?;
+        if !overrides.is_empty() {
+            eprintln!("Using environment overrides:");
+            for (key, value) in overrides {
+                eprintln!("  {key}={value}");
+            }
+            eprintln!();
+        }
+    }
+
+    if using_defaults {
+        eprintln!("Using default configuration (no config file found)");
+        eprintln!("Run `palingenesis config init` to create one\n");
+    }
+
+    let output = if let Some(section_name) = section {
+        format_section(&config, &section_name, json)?
+    } else {
+        format_config(&config, json)?
+    };
+
+    println!("{output}");
     Ok(())
 }
 
@@ -162,4 +202,349 @@ enabled = false
 # metrics = true
 "#
     .to_string()
+}
+
+fn load_config_from_path(path: &Path) -> anyhow::Result<Config> {
+    let contents = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+    let config = toml::from_str(&contents)
+        .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
+    Ok(config)
+}
+
+fn format_config(config: &Config, json: bool) -> anyhow::Result<String> {
+    if json {
+        Ok(serde_json::to_string_pretty(config)?)
+    } else {
+        Ok(toml::to_string_pretty(config)?)
+    }
+}
+
+fn format_section(config: &Config, section: &str, json: bool) -> anyhow::Result<String> {
+    let section = section.to_lowercase();
+    match section.as_str() {
+        "daemon" => format_value(&config.daemon, json),
+        "monitoring" => format_value(&config.monitoring, json),
+        "resume" => format_value(&config.resume, json),
+        "notifications" => format_value(&config.notifications, json),
+        "otel" => {
+            let otel = config.otel.clone().unwrap_or_default();
+            format_value(&otel, json)
+        }
+        _ => anyhow::bail!(
+            "Unknown section: {section}. Valid sections: daemon, monitoring, resume, notifications, otel"
+        ),
+    }
+}
+
+fn format_value<T: Serialize>(value: &T, json: bool) -> anyhow::Result<String> {
+    if json {
+        Ok(serde_json::to_string_pretty(value)?)
+    } else {
+        Ok(toml::to_string_pretty(value)?)
+    }
+}
+
+fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, String)>> {
+    let mut overrides = Vec::new();
+
+    apply_string_env(
+        "PALINGENESIS_LOG_LEVEL",
+        &mut config.daemon.log_level,
+        &mut overrides,
+    );
+    apply_bool_env(
+        "PALINGENESIS_HTTP_ENABLED",
+        &mut config.daemon.http_enabled,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_HTTP_PORT",
+        &mut config.daemon.http_port,
+        &mut overrides,
+    )?;
+    apply_string_env(
+        "PALINGENESIS_HTTP_BIND",
+        &mut config.daemon.http_bind,
+        &mut overrides,
+    );
+    apply_path_env_option(
+        "PALINGENESIS_PID_FILE",
+        &mut config.daemon.pid_file,
+        &mut overrides,
+    );
+    apply_path_env_option(
+        "PALINGENESIS_SOCKET_PATH",
+        &mut config.daemon.socket_path,
+        &mut overrides,
+    );
+    apply_path_env_option(
+        "PALINGENESIS_LOG_FILE",
+        &mut config.daemon.log_file,
+        &mut overrides,
+    );
+
+    apply_path_env_value(
+        "PALINGENESIS_SESSION_DIR",
+        &mut config.monitoring.session_dir,
+        &mut overrides,
+    );
+    apply_list_env(
+        "PALINGENESIS_ASSISTANTS",
+        &mut config.monitoring.assistants,
+        &mut overrides,
+    );
+    apply_bool_env(
+        "PALINGENESIS_AUTO_DETECT",
+        &mut config.monitoring.auto_detect,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_DEBOUNCE_MS",
+        &mut config.monitoring.debounce_ms,
+        &mut overrides,
+    )?;
+    apply_option_parse_env(
+        "PALINGENESIS_POLL_INTERVAL_SECS",
+        &mut config.monitoring.poll_interval_secs,
+        &mut overrides,
+    )?;
+
+    apply_bool_env(
+        "PALINGENESIS_RESUME_ENABLED",
+        &mut config.resume.enabled,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_RESUME_BASE_DELAY_SECS",
+        &mut config.resume.base_delay_secs,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_RESUME_MAX_DELAY_SECS",
+        &mut config.resume.max_delay_secs,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_RESUME_MAX_RETRIES",
+        &mut config.resume.max_retries,
+        &mut overrides,
+    )?;
+    apply_bool_env(
+        "PALINGENESIS_RESUME_JITTER",
+        &mut config.resume.jitter,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_RESUME_BACKUP_COUNT",
+        &mut config.resume.backup_count,
+        &mut overrides,
+    )?;
+
+    apply_bool_env(
+        "PALINGENESIS_NOTIFICATIONS_ENABLED",
+        &mut config.notifications.enabled,
+        &mut overrides,
+    )?;
+
+    if let Ok(url) = env::var("PALINGENESIS_WEBHOOK_URL") {
+        config.notifications.webhook = Some(WebhookConfig {
+            url: url.clone(),
+            headers: None,
+        });
+        config.notifications.enabled = true;
+        overrides.push(("PALINGENESIS_WEBHOOK_URL".to_string(), url));
+    }
+
+    if let Ok(topic) = env::var("PALINGENESIS_NTFY_TOPIC") {
+        let mut ntfy = NtfyConfig {
+            topic: topic.clone(),
+            server: None,
+            priority: None,
+        };
+        if let Ok(server) = env::var("PALINGENESIS_NTFY_SERVER") {
+            ntfy.server = Some(server.clone());
+            overrides.push(("PALINGENESIS_NTFY_SERVER".to_string(), server));
+        }
+        if let Ok(priority) = env::var("PALINGENESIS_NTFY_PRIORITY") {
+            ntfy.priority = Some(priority.clone());
+            overrides.push(("PALINGENESIS_NTFY_PRIORITY".to_string(), priority));
+        }
+        config.notifications.ntfy = Some(ntfy);
+        config.notifications.enabled = true;
+        overrides.push(("PALINGENESIS_NTFY_TOPIC".to_string(), topic));
+    }
+
+    if let Ok(url) = env::var("PALINGENESIS_DISCORD_WEBHOOK_URL") {
+        config.notifications.discord = Some(DiscordConfig {
+            webhook_url: url.clone(),
+        });
+        config.notifications.enabled = true;
+        overrides.push(("PALINGENESIS_DISCORD_WEBHOOK_URL".to_string(), url));
+    }
+
+    if let Ok(url) = env::var("PALINGENESIS_SLACK_WEBHOOK_URL") {
+        config.notifications.slack = Some(SlackConfig {
+            webhook_url: url.clone(),
+        });
+        config.notifications.enabled = true;
+        overrides.push(("PALINGENESIS_SLACK_WEBHOOK_URL".to_string(), url));
+    }
+
+    let mut otel_config = config.otel.clone();
+    let mut otel_override = false;
+
+    if let Ok(value) = env::var("PALINGENESIS_OTEL_ENABLED") {
+        let parsed = value
+            .parse::<bool>()
+            .context("PALINGENESIS_OTEL_ENABLED must be true/false")?;
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.enabled = parsed;
+        }
+        overrides.push(("PALINGENESIS_OTEL_ENABLED".to_string(), value));
+        otel_override = true;
+    }
+
+    if let Ok(endpoint) = env::var("PALINGENESIS_OTEL_ENDPOINT") {
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.endpoint = Some(endpoint.clone());
+        }
+        overrides.push(("PALINGENESIS_OTEL_ENDPOINT".to_string(), endpoint));
+        otel_override = true;
+    }
+
+    if let Ok(name) = env::var("PALINGENESIS_OTEL_SERVICE_NAME") {
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.service_name = name.clone();
+        }
+        overrides.push(("PALINGENESIS_OTEL_SERVICE_NAME".to_string(), name));
+        otel_override = true;
+    }
+
+    if let Ok(value) = env::var("PALINGENESIS_OTEL_TRACES") {
+        let parsed = value
+            .parse::<bool>()
+            .context("PALINGENESIS_OTEL_TRACES must be true/false")?;
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.traces = parsed;
+        }
+        overrides.push(("PALINGENESIS_OTEL_TRACES".to_string(), value));
+        otel_override = true;
+    }
+
+    if let Ok(value) = env::var("PALINGENESIS_OTEL_METRICS") {
+        let parsed = value
+            .parse::<bool>()
+            .context("PALINGENESIS_OTEL_METRICS must be true/false")?;
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.metrics = parsed;
+        }
+        overrides.push(("PALINGENESIS_OTEL_METRICS".to_string(), value));
+        otel_override = true;
+    }
+
+    if otel_override {
+        config.otel = otel_config;
+    }
+
+    Ok(overrides)
+}
+
+fn apply_string_env(key: &str, target: &mut String, overrides: &mut Vec<(String, String)>) {
+    if let Ok(value) = env::var(key) {
+        *target = value.clone();
+        overrides.push((key.to_string(), value));
+    }
+}
+
+fn apply_parse_env<T>(
+    key: &str,
+    target: &mut T,
+    overrides: &mut Vec<(String, String)>,
+) -> anyhow::Result<()>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    if let Ok(value) = env::var(key) {
+        *target = value
+            .parse()
+            .map_err(|err| anyhow::anyhow!("{key} is invalid: {err}"))?;
+        overrides.push((key.to_string(), value));
+    }
+    Ok(())
+}
+
+fn apply_option_parse_env<T>(
+    key: &str,
+    target: &mut Option<T>,
+    overrides: &mut Vec<(String, String)>,
+) -> anyhow::Result<()>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    if let Ok(value) = env::var(key) {
+        *target = Some(
+            value
+                .parse()
+                .map_err(|err| anyhow::anyhow!("{key} is invalid: {err}"))?,
+        );
+        overrides.push((key.to_string(), value));
+    }
+    Ok(())
+}
+
+fn apply_bool_env(
+    key: &str,
+    target: &mut bool,
+    overrides: &mut Vec<(String, String)>,
+) -> anyhow::Result<()> {
+    if let Ok(value) = env::var(key) {
+        *target = value
+            .parse()
+            .with_context(|| format!("{key} must be true/false"))?;
+        overrides.push((key.to_string(), value));
+    }
+    Ok(())
+}
+
+fn apply_path_env_option(
+    key: &str,
+    target: &mut Option<PathBuf>,
+    overrides: &mut Vec<(String, String)>,
+) {
+    if let Ok(value) = env::var(key) {
+        *target = Some(PathBuf::from(&value));
+        overrides.push((key.to_string(), value));
+    }
+}
+
+fn apply_list_env(
+    key: &str,
+    target: &mut Vec<String>,
+    overrides: &mut Vec<(String, String)>,
+) {
+    if let Ok(value) = env::var(key) {
+        let list = value
+            .split(',')
+            .map(|item| item.trim())
+            .filter(|item| !item.is_empty())
+            .map(String::from)
+            .collect::<Vec<_>>();
+        *target = list;
+        overrides.push((key.to_string(), value));
+    }
+}
+
+fn apply_path_env_value(key: &str, target: &mut PathBuf, overrides: &mut Vec<(String, String)>) {
+    if let Ok(value) = env::var(key) {
+        *target = PathBuf::from(&value);
+        overrides.push((key.to_string(), value));
+    }
 }

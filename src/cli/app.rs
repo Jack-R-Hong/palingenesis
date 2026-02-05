@@ -81,7 +81,17 @@ pub enum ConfigAction {
         path: Option<PathBuf>,
     },
     /// Show current configuration
-    Show,
+    Show {
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+        /// Show only a specific section
+        #[arg(long)]
+        section: Option<String>,
+        /// Show effective config (including env overrides)
+        #[arg(long)]
+        effective: bool,
+    },
     /// Validate configuration
     Validate,
     /// Edit configuration
@@ -337,9 +347,47 @@ mod tests {
         let cli = Cli::try_parse_from(["palingenesis", "config", "show"]).unwrap();
         match cli.command {
             Some(Commands::Config {
-                action: ConfigAction::Show,
-            }) => {}
+                action:
+                    ConfigAction::Show {
+                        json,
+                        section,
+                        effective,
+                    },
+            }) => {
+                assert!(!json);
+                assert!(section.is_none());
+                assert!(!effective);
+            }
             _ => panic!("Expected Config Show command"),
+        }
+    }
+
+    #[test]
+    fn test_config_show_command_with_flags() {
+        let cli = Cli::try_parse_from([
+            "palingenesis",
+            "config",
+            "show",
+            "--json",
+            "--section",
+            "daemon",
+            "--effective",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Config {
+                action:
+                    ConfigAction::Show {
+                        json,
+                        section,
+                        effective,
+                    },
+            }) => {
+                assert!(json);
+                assert_eq!(section.as_deref(), Some("daemon"));
+                assert!(effective);
+            }
+            _ => panic!("Expected Config Show command with flags"),
         }
     }
 

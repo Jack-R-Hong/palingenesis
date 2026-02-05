@@ -1,6 +1,6 @@
 # Story 4.3: Config Show Command
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -43,48 +43,48 @@ So that I can verify settings without opening the file.
 
 ## Tasks / Subtasks
 
-- [ ] Add config show subcommand to CLI (AC: 1, 3, 5, 6)
-  - [ ] Add `show` subcommand to `ConfigCmd` enum
-  - [ ] Add `--json` flag for JSON output
-  - [ ] Add `--section` option for filtering
-  - [ ] Add `--effective` flag for runtime values
+- [x] Add config show subcommand to CLI (AC: 1, 3, 5, 6)
+  - [x] Add `show` subcommand to `ConfigCmd` enum
+  - [x] Add `--json` flag for JSON output
+  - [x] Add `--section` option for filtering
+  - [x] Add `--effective` flag for runtime values
 
-- [ ] Implement config loading (AC: 1, 2, 4)
-  - [ ] Load config from file if exists
-  - [ ] Fall back to defaults if no file
-  - [ ] Merge file config with defaults
+- [x] Implement config loading (AC: 1, 2, 4)
+  - [x] Load config from file if exists
+  - [x] Fall back to defaults if no file
+  - [x] Merge file config with defaults
 
-- [ ] Implement TOML output (AC: 1)
-  - [ ] Serialize config to TOML string
-  - [ ] Use pretty formatting
-  - [ ] Print to stdout
+- [x] Implement TOML output (AC: 1)
+  - [x] Serialize config to TOML string
+  - [x] Use pretty formatting
+  - [x] Print to stdout
 
-- [ ] Implement JSON output (AC: 3)
-  - [ ] Serialize config to JSON when --json flag
-  - [ ] Use pretty-printed JSON
-  - [ ] Print to stdout
+- [x] Implement JSON output (AC: 3)
+  - [x] Serialize config to JSON when --json flag
+  - [x] Use pretty-printed JSON
+  - [x] Print to stdout
 
-- [ ] Implement section filtering (AC: 5)
-  - [ ] Parse --section argument
-  - [ ] Extract only requested section
-  - [ ] Handle invalid section names
+- [x] Implement section filtering (AC: 5)
+  - [x] Parse --section argument
+  - [x] Extract only requested section
+  - [x] Handle invalid section names
 
-- [ ] Implement effective config (AC: 6)
-  - [ ] Apply environment variable overrides
-  - [ ] Show actually-used values
-  - [ ] Indicate which values came from env
+- [x] Implement effective config (AC: 6)
+  - [x] Apply environment variable overrides
+  - [x] Show actually-used values
+  - [x] Indicate which values came from env
 
-- [ ] Add default config notice (AC: 2)
-  - [ ] Detect when using defaults
-  - [ ] Print notice to stderr before config output
-  - [ ] Suggest running `config init`
+- [x] Add default config notice (AC: 2)
+  - [x] Detect when using defaults
+  - [x] Print notice to stderr before config output
+  - [x] Suggest running `config init`
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test show with existing config
-  - [ ] Test show with no config
-  - [ ] Test JSON output
-  - [ ] Test section filter
-  - [ ] Test effective config with env vars
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test show with existing config
+  - [x] Test show with no config
+  - [x] Test JSON output
+  - [x] Test section filter
+  - [x] Test effective config with env vars
 
 ## Dev Notes
 
@@ -262,8 +262,10 @@ Uses existing dependencies:
 **Files to modify:**
 - `src/cli/app.rs`
 - `src/cli/commands/config.rs`
-- `_bmad-output/sprint-status.yaml`
+- `src/main.rs`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented config show output, filters, env overrides, and tests

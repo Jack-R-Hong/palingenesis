@@ -69,7 +69,7 @@ development_status:
   epic-4: in-progress
   4-1-config-schema-definition: done
   4-2-config-init-command: done
-  4-3-config-show-command: ready-for-dev
+  4-3-config-show-command: done
   4-4-config-validate-command: ready-for-dev
   4-5-config-edit-command: ready-for-dev
   4-6-hot-reload-via-sighup: ready-for-dev
