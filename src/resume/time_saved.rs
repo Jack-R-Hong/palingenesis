@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use tracing::warn;
 
+use crate::config::Paths;
 use crate::config::schema::{Config, MetricsConfig};
 use crate::config::validation::validate_config;
-use crate::config::Paths;
 
 /// Result of calculating time saved by automatic session resumption.
 ///

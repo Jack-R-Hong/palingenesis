@@ -9,4 +9,4 @@ pub use schema::{
     Config, DaemonConfig, DiscordConfig, MetricsConfig, MonitoringConfig, NotificationsConfig,
     NtfyConfig, OtelConfig, ResumeConfig, SlackConfig, WebhookConfig,
 };
-pub use validation::{validate_config, ValidationError, ValidationResult, ValidationWarning};
+pub use validation::{ValidationError, ValidationResult, ValidationWarning, validate_config};

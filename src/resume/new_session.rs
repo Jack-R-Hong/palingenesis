@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio::fs;
-use tracing::{debug, info, warn, Span};
+use tracing::{Span, debug, info, warn};
 
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
@@ -346,10 +346,7 @@ impl ResumeStrategy for NewSessionStrategy {
         span.record("wait_duration_ms", 0);
         let metrics = Metrics::global();
         if let Some(metrics) = metrics.as_ref() {
-            let reason = ctx
-                .stop_reason
-                .metrics_reason_label()
-                .unwrap_or("manual");
+            let reason = ctx.stop_reason.metrics_reason_label().unwrap_or("manual");
             metrics.set_retry_attempts(ctx.attempt_number);
             metrics.record_resume_started(reason);
         }
@@ -365,7 +362,11 @@ impl ResumeStrategy for NewSessionStrategy {
                     path: ctx.session_path.clone(),
                 };
                 if let Some(metrics) = metrics.as_ref() {
-                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    metrics.record_resume_completed(
+                        start.elapsed(),
+                        false,
+                        Some(err.error_label()),
+                    );
                     metrics.set_retry_attempts(0);
                 }
                 span.record("outcome", "error");
@@ -419,7 +420,11 @@ impl ResumeStrategy for NewSessionStrategy {
                     let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
                 }
                 if let Some(metrics) = metrics.as_ref() {
-                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    metrics.record_resume_completed(
+                        start.elapsed(),
+                        false,
+                        Some(err.error_label()),
+                    );
                     metrics.set_retry_attempts(0);
                 }
                 span.record("outcome", "error");

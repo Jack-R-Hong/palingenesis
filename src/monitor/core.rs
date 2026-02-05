@@ -202,7 +202,8 @@ impl Monitor {
                         .reason
                         .metrics_reason_label()
                         .unwrap_or("unknown");
-                    if let Some(latency) = estimate_detection_latency(self.current_session.as_ref()) {
+                    if let Some(latency) = estimate_detection_latency(self.current_session.as_ref())
+                    {
                         metrics.record_detection(latency, reason);
                     }
                 }

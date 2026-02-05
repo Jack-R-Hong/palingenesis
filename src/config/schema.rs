@@ -332,6 +332,10 @@ pub struct OtelConfig {
     /// Enable trace export.
     /// Example: traces = true
     pub traces: bool,
+    /// Enable log export via OTLP.
+    /// Example: logs = true
+    #[serde(default)]
+    pub logs: bool,
     /// Enable metrics export.
     /// Example: metrics = true
     pub metrics: bool,
@@ -350,6 +354,7 @@ impl Default for OtelConfig {
             protocol: default_otel_protocol(),
             sampling_ratio: default_otel_sampling_ratio(),
             traces: true,
+            logs: false,
             metrics: true,
             metrics_enabled: default_metrics_enabled(),
         }

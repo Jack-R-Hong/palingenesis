@@ -1576,6 +1576,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry-appender-tracing"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66b811e9387ff25074c720debb71d4ef9e72a1c5087b4da292a8f61479febaf2"
+dependencies = [
+ "once_cell",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "tracing",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "opentelemetry-http"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1644,6 +1658,7 @@ dependencies = [
  "ordered-float",
  "percent-encoding",
  "rand 0.8.5",
+ "serde_json",
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
@@ -1685,6 +1700,7 @@ dependencies = [
  "notify",
  "notify-debouncer-full",
  "opentelemetry",
+ "opentelemetry-appender-tracing",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "predicates",

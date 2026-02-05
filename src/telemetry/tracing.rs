@@ -135,12 +135,14 @@ pub fn init_tracing(
     #[cfg(feature = "otel")]
     let otel_layer = otel_config.and_then(otel::build_otel_layer);
     #[cfg(feature = "otel")]
-    let otel_enabled = otel_layer.is_some();
+    let otel_logs_layer = otel_config.and_then(otel::build_otel_logs_layer);
+    #[cfg(feature = "otel")]
+    let otel_enabled = otel_layer.is_some() || otel_logs_layer.is_some();
 
     #[cfg(not(feature = "otel"))]
     let otel_enabled = {
         if let Some(otel_config) = otel_config {
-            if otel_config.enabled && otel_config.traces {
+            if otel_config.enabled && (otel_config.traces || otel_config.logs) {
                 tracing::warn!("OpenTelemetry feature not enabled; rebuild with --features otel");
             }
         }
@@ -148,11 +150,17 @@ pub fn init_tracing(
     };
 
     #[cfg(feature = "otel")]
-    let default_guard = match (config.log_to_stderr, file.as_ref(), otel_layer) {
-        (true, Some(file_ref), otel_layer) => {
+    let default_guard = match (
+        config.log_to_stderr,
+        file.as_ref(),
+        otel_layer,
+        otel_logs_layer,
+    ) {
+        (true, Some(file_ref), otel_layer, otel_logs_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
             let base = tracing_subscriber::registry()
                 .with(otel_layer)
+                .with(otel_logs_layer)
                 .with(env_filter);
             if config.json_format {
                 let stderr_layer = tracing_subscriber::fmt::layer()
@@ -182,9 +190,10 @@ pub fn init_tracing(
                 base.with(stderr_layer).with(file_layer).set_default()
             }
         }
-        (true, None, otel_layer) => {
+        (true, None, otel_layer, otel_logs_layer) => {
             let base = tracing_subscriber::registry()
                 .with(otel_layer)
+                .with(otel_logs_layer)
                 .with(env_filter);
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
@@ -203,10 +212,11 @@ pub fn init_tracing(
                 base.with(layer).set_default()
             }
         }
-        (false, Some(file_ref), otel_layer) => {
+        (false, Some(file_ref), otel_layer, otel_logs_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
             let base = tracing_subscriber::registry()
                 .with(otel_layer)
+                .with(otel_logs_layer)
                 .with(env_filter);
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
@@ -225,8 +235,9 @@ pub fn init_tracing(
                 base.with(layer).set_default()
             }
         }
-        (false, None, otel_layer) => tracing_subscriber::registry()
+        (false, None, otel_layer, otel_logs_layer) => tracing_subscriber::registry()
             .with(otel_layer)
+            .with(otel_logs_layer)
             .with(env_filter)
             .set_default(),
     };

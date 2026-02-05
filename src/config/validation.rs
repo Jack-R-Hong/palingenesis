@@ -390,10 +390,12 @@ mod tests {
         let mut config = Config::default();
         config.daemon.log_level = "verbose".to_string();
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "daemon.log_level"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "daemon.log_level")
+        );
     }
 
     #[test]
@@ -401,10 +403,12 @@ mod tests {
         let mut config = Config::default();
         config.resume.base_delay_secs = 0;
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "resume.base_delay_secs"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "resume.base_delay_secs")
+        );
     }
 
     #[test]
@@ -415,10 +419,12 @@ mod tests {
             headers: None,
         });
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "notifications.webhook.url"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "notifications.webhook.url")
+        );
     }
 
     #[test]
@@ -435,10 +441,12 @@ mod tests {
         config.bot.enabled = true;
         config.bot.discord_public_key = Some("not-hex".to_string());
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "bot.discord_public_key"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "bot.discord_public_key")
+        );
     }
 
     #[test]
@@ -447,10 +455,12 @@ mod tests {
         config.bot.enabled = true;
         config.bot.discord_public_key = Some("abcd1234".to_string());
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "bot.discord_public_key" && err.message.contains("64")));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "bot.discord_public_key" && err.message.contains("64"))
+        );
     }
 
     #[test]
@@ -458,10 +468,12 @@ mod tests {
         let mut config = Config::default();
         config.metrics.manual_restart_time_seconds = 30;
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "metrics.manual_restart_time_seconds"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "metrics.manual_restart_time_seconds")
+        );
     }
 
     #[test]
@@ -481,9 +493,11 @@ mod tests {
         otel.sampling_ratio = 1.5;
         config.otel = Some(otel);
         let result = validate_config(&config);
-        assert!(result
-            .errors
-            .iter()
-            .any(|err| err.field == "otel.sampling_ratio"));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|err| err.field == "otel.sampling_ratio")
+        );
     }
 }

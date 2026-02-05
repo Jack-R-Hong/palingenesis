@@ -20,4 +20,4 @@ pub use outcome::ResumeOutcome;
 pub use same_session::{ResumeTrigger, SameSessionConfig, SameSessionStrategy};
 pub use selector::{StrategySelector, UnknownStrategy};
 pub use strategy::ResumeStrategy;
-pub use time_saved::{calculate_time_saved, load_metrics_config, TimeSavedCalculation};
+pub use time_saved::{TimeSavedCalculation, calculate_time_saved, load_metrics_config};

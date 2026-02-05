@@ -129,6 +129,7 @@ metrics = true
             protocol: "grpc".to_string(),
             sampling_ratio: 0.25,
             traces: false,
+            logs: false,
             metrics: true,
             metrics_enabled: true,
         }

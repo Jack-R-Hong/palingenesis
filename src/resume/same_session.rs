@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn, Span};
+use tracing::{Span, debug, info, warn};
 
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
@@ -251,10 +251,7 @@ impl ResumeStrategy for SameSessionStrategy {
         span.record("wait_duration_ms", 0);
         let metrics = Metrics::global();
         if let Some(metrics) = metrics.as_ref() {
-            let reason = ctx
-                .stop_reason
-                .metrics_reason_label()
-                .unwrap_or("manual");
+            let reason = ctx.stop_reason.metrics_reason_label().unwrap_or("manual");
             metrics.set_retry_attempts(ctx.attempt_number);
             metrics.record_resume_started(reason);
         }
@@ -303,7 +300,8 @@ impl ResumeStrategy for SameSessionStrategy {
 
         match self.trigger.trigger(ctx).await {
             Ok(()) => {
-                if let Err(err) = self.update_state_on_resume(ctx, wait_duration, metrics.as_deref())
+                if let Err(err) =
+                    self.update_state_on_resume(ctx, wait_duration, metrics.as_deref())
                 {
                     span.record("outcome", "error");
                     return Err(err);
@@ -332,7 +330,11 @@ impl ResumeStrategy for SameSessionStrategy {
                 }
                 let retryable = ctx.attempt_number < self.config.max_retries;
                 if let Some(metrics) = metrics.as_ref() {
-                    metrics.record_resume_completed(start.elapsed(), false, Some(err.error_label()));
+                    metrics.record_resume_completed(
+                        start.elapsed(),
+                        false,
+                        Some(err.error_label()),
+                    );
                     if !retryable {
                         metrics.set_retry_attempts(0);
                     }

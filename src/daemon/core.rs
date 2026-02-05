@@ -4,7 +4,7 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 use tokio::time;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, info_span, warn, Instrument};
+use tracing::{Instrument, error, info, info_span, warn};
 
 use crate::daemon::pid::{PidError, PidFile};
 use crate::daemon::shutdown::{SHUTDOWN_TIMEOUT, ShutdownCoordinator, ShutdownResult};

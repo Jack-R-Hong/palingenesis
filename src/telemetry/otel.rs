@@ -63,7 +63,8 @@ pub fn shutdown_otel() {
     #[cfg(feature = "otel")]
     {
         opentelemetry::global::shutdown_tracer_provider();
-        info!("OpenTelemetry tracer shut down");
+        opentelemetry::global::shutdown_logger_provider();
+        info!("OpenTelemetry tracer and logger shut down");
     }
 }
 
@@ -173,6 +174,88 @@ fn set_error_handler() -> Result<(), opentelemetry::global::Error> {
         }
     });
     result
+}
+
+#[cfg(feature = "otel")]
+pub type OtelLogsLayer = opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge<
+    opentelemetry_sdk::logs::LoggerProvider,
+    opentelemetry_sdk::logs::Logger,
+>;
+
+#[cfg(not(feature = "otel"))]
+pub type OtelLogsLayer = ();
+
+#[cfg(feature = "otel")]
+fn build_log_exporter(
+    endpoint: &str,
+    protocol: OtelProtocol,
+) -> Result<opentelemetry_otlp::LogExporter, opentelemetry::logs::LogError> {
+    match protocol {
+        OtelProtocol::Http => opentelemetry_otlp::new_exporter()
+            .http()
+            .with_endpoint(endpoint.to_string())
+            .build_log_exporter(),
+        OtelProtocol::Grpc => opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint(endpoint.to_string())
+            .build_log_exporter(),
+    }
+}
+
+pub fn build_otel_logs_layer(config: &OtelConfig) -> Option<OtelLogsLayer> {
+    if !config.enabled || !config.logs {
+        return None;
+    }
+
+    let endpoint = config.endpoint.trim();
+    if endpoint.is_empty() {
+        warn!("OpenTelemetry endpoint is empty; skipping logs setup");
+        return None;
+    }
+
+    let protocol = OtelProtocol::parse(&config.protocol).unwrap_or_else(|| {
+        warn!(protocol = %config.protocol, "Unknown OpenTelemetry protocol; defaulting to http");
+        OtelProtocol::Http
+    });
+
+    #[cfg(feature = "otel")]
+    {
+        let _ = set_error_handler();
+
+        let exporter = match build_log_exporter(endpoint, protocol) {
+            Ok(exp) => exp,
+            Err(err) => {
+                warn!(error = %err, "OpenTelemetry log exporter creation failed");
+                return None;
+            }
+        };
+
+        let logger_provider = opentelemetry_sdk::logs::LoggerProvider::builder()
+            .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+            .with_config(opentelemetry_sdk::logs::Config::default().with_resource(
+                opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
+                    "service.name",
+                    config.service_name.clone(),
+                )]),
+            ))
+            .build();
+
+        opentelemetry::global::set_logger_provider(logger_provider.clone());
+        info!("OpenTelemetry logs enabled");
+
+        Some(
+            opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(
+                &logger_provider,
+            ),
+        )
+    }
+
+    #[cfg(not(feature = "otel"))]
+    {
+        warn!("OpenTelemetry feature not enabled; skipping logs setup");
+        let _ = protocol;
+        None
+    }
 }
 
 #[cfg(test)]
