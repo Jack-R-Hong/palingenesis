@@ -1,6 +1,6 @@
 # Story 1.6: Unix Socket IPC Server
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -53,47 +53,47 @@ So that CLI tools can communicate with me efficiently.
 
 ## Tasks / Subtasks
 
-- [ ] Create IPC module structure (AC: 1, 6, 7)
-  - [ ] Create `src/ipc/socket.rs` with IpcServer struct
-  - [ ] Create `src/ipc/protocol.rs` with Command and Response types
-  - [ ] Update `src/ipc/mod.rs` to export modules
-- [ ] Implement IPC protocol types (AC: 2, 3, 4, 5)
-  - [ ] Define `IpcCommand` enum (Status, Pause, Resume, Reload)
-  - [ ] Define `IpcResponse` enum (Ok, Error, Status)
-  - [ ] Implement parsing from text commands (`STATUS\n`, etc.)
-  - [ ] Implement response serialization
-- [ ] Implement IpcServer struct (AC: 1, 6)
-  - [ ] Define `IpcError` enum with thiserror (Io, Protocol, AlreadyBound)
-  - [ ] Implement `IpcServer::new()` - uses `Paths::runtime_dir().join("palingenesis.sock")`
-  - [ ] Implement stale socket detection and removal
-  - [ ] Implement `IpcServer::bind()` - creates and binds UnixListener
-- [ ] Implement connection handling (AC: 2, 3, 4, 5)
-  - [ ] Implement `IpcServer::run()` - accepts connections in loop
-  - [ ] Implement `handle_connection()` - read command, process, respond
-  - [ ] Implement command dispatch to daemon state
-  - [ ] Handle connection timeouts (5s)
-- [ ] Implement graceful shutdown integration (AC: 7)
-  - [ ] Accept CancellationToken for graceful shutdown
-  - [ ] Remove socket file on shutdown
-  - [ ] Implement `Drop` trait for automatic cleanup
-- [ ] Integrate with daemon state (AC: 2, 3, 4, 5)
-  - [ ] Accept shared daemon state (Arc<RwLock<DaemonState>>)
-  - [ ] STATUS returns JSON serialized state
-  - [ ] PAUSE/RESUME modify daemon state
-  - [ ] RELOAD triggers config reload
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6, 7)
-  - [ ] Test socket creation and binding
-  - [ ] Test stale socket cleanup
-  - [ ] Test command parsing
-  - [ ] Test response serialization
-  - [ ] Test STATUS command handling
-  - [ ] Test PAUSE/RESUME command handling
-  - [ ] Test connection timeout
-  - [ ] Test cleanup on drop
-- [ ] Add integration tests
-  - [ ] Test full IPC server lifecycle
-  - [ ] Test concurrent client connections
-  - [ ] Test graceful shutdown with CancellationToken
+- [x] Create IPC module structure (AC: 1, 6, 7)
+  - [x] Create `src/ipc/socket.rs` with IpcServer struct
+  - [x] Create `src/ipc/protocol.rs` with Command and Response types
+  - [x] Update `src/ipc/mod.rs` to export modules
+- [x] Implement IPC protocol types (AC: 2, 3, 4, 5)
+  - [x] Define `IpcCommand` enum (Status, Pause, Resume, Reload)
+  - [x] Define `IpcResponse` enum (Ok, Error, Status)
+  - [x] Implement parsing from text commands (`STATUS\n`, etc.)
+  - [x] Implement response serialization
+- [x] Implement IpcServer struct (AC: 1, 6)
+  - [x] Define `IpcError` enum with thiserror (Io, Protocol, AlreadyBound)
+  - [x] Implement `IpcServer::new()` - uses `Paths::runtime_dir().join("palingenesis.sock")`
+  - [x] Implement stale socket detection and removal
+  - [x] Implement `IpcServer::bind()` - creates and binds UnixListener
+- [x] Implement connection handling (AC: 2, 3, 4, 5)
+  - [x] Implement `IpcServer::run()` - accepts connections in loop
+  - [x] Implement `handle_connection()` - read command, process, respond
+  - [x] Implement command dispatch to daemon state
+  - [x] Handle connection timeouts (5s)
+- [x] Implement graceful shutdown integration (AC: 7)
+  - [x] Accept CancellationToken for graceful shutdown
+  - [x] Remove socket file on shutdown
+  - [x] Implement `Drop` trait for automatic cleanup
+- [x] Integrate with daemon state (AC: 2, 3, 4, 5)
+  - [x] Accept shared daemon state (Arc<RwLock<DaemonState>>)
+  - [x] STATUS returns JSON serialized state
+  - [x] PAUSE/RESUME modify daemon state
+  - [x] RELOAD triggers config reload
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6, 7)
+  - [x] Test socket creation and binding
+  - [x] Test stale socket cleanup
+  - [x] Test command parsing
+  - [x] Test response serialization
+  - [x] Test STATUS command handling
+  - [x] Test PAUSE/RESUME command handling
+  - [x] Test connection timeout
+  - [x] Test cleanup on drop
+- [x] Add integration tests
+  - [x] Test full IPC server lifecycle
+  - [x] Test concurrent client connections
+  - [x] Test graceful shutdown with CancellationToken
 
 ## Dev Notes
 
@@ -609,7 +609,13 @@ From Story 1-5 (PID File Management):
 
 ### Agent Model Used
 
-(to be filled by implementing agent)
+openai/gpt-5.2-codex
+
+### Implementation Plan
+
+- Add IPC protocol types for commands and responses with text parsing/serialization.
+- Implement Unix socket server bind/run/cleanup lifecycle with stale socket removal and timeouts.
+- Add unit and integration tests for lifecycle, commands, concurrency, and timeouts.
 
 ### Debug Log References
 
@@ -619,21 +625,32 @@ From Story 1-5 (PID File Management):
 
 ### Completion Notes List
 
-(to be filled by implementing agent)
+- Implemented IPC protocol and socket server with command dispatch and timeout handling.
+- Added unit and integration tests covering socket lifecycle, commands, concurrency, and timeouts.
+- Added shared env lock for tests and updated socket binding to create parent directories safely.
+- Verified `cargo build`, `cargo test`, `cargo clippy`.
 
 ### File List
 
 **Files to create:**
 - `src/ipc/socket.rs`
 - `src/ipc/protocol.rs`
+- `src/test_utils.rs`
 - `tests/ipc_test.rs`
 
 **Files to modify:**
-- `src/ipc/mod.rs` - Export socket and protocol modules
 - `Cargo.toml` - Add tokio-util dependency
+- `Cargo.lock`
+- `src/ipc/mod.rs` - Export socket and protocol modules
+- `src/ipc/socket.rs`
+- `src/lib.rs`
+- `src/config/paths.rs`
+- `src/daemon/pid.rs`
 - `_bmad-output/implementation-artifacts/1-6-unix-socket-ipc-server.md` - Update story status and tasks
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` - Update story status
+- `logs/tasks/2026-02-05.jsonl`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented Unix socket IPC server, protocol, and tests; verified build/test/clippy
