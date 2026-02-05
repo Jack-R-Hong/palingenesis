@@ -57,9 +57,9 @@ development_status:
   3-1-resume-strategy-trait: done
   3-2-same-session-resume-strategy: done
   3-3-new-session-resume-strategy: done
-  3-4-session-backup-before-new-session: ready-for-dev
-  3-5-exponential-backoff-implementation: ready-for-dev
-  3-6-audit-trail-logging: ready-for-dev
+  3-4-session-backup-before-new-session: done
+  3-5-exponential-backoff-implementation: done
+  3-6-audit-trail-logging: done
   3-7-pause-command-implementation: ready-for-dev
   3-8-resume-command-implementation: ready-for-dev
   3-9-force-new-session-command: ready-for-dev
