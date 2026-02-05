@@ -27,8 +27,29 @@ pub async fn handle_pause() -> anyhow::Result<()> {
 }
 
 pub async fn handle_resume() -> anyhow::Result<()> {
-    println!("resume not implemented (Story 3.8)");
-    Ok(())
+    match IpcClient::resume().await {
+        Ok(()) => {
+            println!("Monitoring resumed");
+            Ok(())
+        }
+        Err(IpcClientError::NotRunning) => {
+            eprintln!("Daemon not running");
+            std::process::exit(1);
+        }
+        Err(IpcClientError::Timeout) => {
+            eprintln!("Daemon unresponsive");
+            std::process::exit(1);
+        }
+        Err(IpcClientError::Protocol(message)) => {
+            if message.eq_ignore_ascii_case("Daemon is not paused") {
+                println!("Already monitoring");
+                Ok(())
+            } else {
+                Err(IpcClientError::Protocol(message).into())
+            }
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 pub async fn handle_new_session() -> anyhow::Result<()> {
@@ -125,7 +146,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_pause() {
+    async fn test_handle_pause_and_resume() {
         let _lock = ENV_LOCK.lock().unwrap();
         let temp = tempdir().unwrap();
         set_env_var("PALINGENESIS_RUNTIME", temp.path());
@@ -135,6 +156,8 @@ mod tests {
 
         handle_pause().await.unwrap();
         assert!(state.is_paused());
+        handle_resume().await.unwrap();
+        assert!(!state.is_paused());
 
         cancel.cancel();
         remove_env_var("PALINGENESIS_RUNTIME");
