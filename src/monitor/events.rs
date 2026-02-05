@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
+use crate::monitor::process::{ProcessEvent, ProcessInfo};
 use crate::monitor::session::Session;
 
 /// Events emitted by the file system watcher.
@@ -35,6 +36,13 @@ pub enum MonitorEvent {
         session: Session,
         previous: Option<Session>,
     },
+    /// An opencode process started.
+    ProcessStarted { info: ProcessInfo },
+    /// An opencode process stopped.
+    ProcessStopped {
+        info: ProcessInfo,
+        exit_code: Option<i32>,
+    },
     /// Watcher or parser encountered an error.
     Error(String),
 }
@@ -53,6 +61,8 @@ pub enum WatchError {
 
 pub type WatchEventSender = mpsc::Sender<WatchEvent>;
 pub type WatchEventReceiver = mpsc::Receiver<WatchEvent>;
+pub type MonitorEventSender = mpsc::Sender<MonitorEvent>;
+pub type MonitorEventReceiver = mpsc::Receiver<MonitorEvent>;
 
 impl From<WatchEvent> for MonitorEvent {
     fn from(event: WatchEvent) -> Self {
@@ -62,6 +72,17 @@ impl From<WatchEvent> for MonitorEvent {
             WatchEvent::FileDeleted(path) => MonitorEvent::FileDeleted(path),
             WatchEvent::DirectoryCreated(path) => MonitorEvent::DirectoryCreated(path),
             WatchEvent::Error(message) => MonitorEvent::Error(message),
+        }
+    }
+}
+
+impl From<ProcessEvent> for MonitorEvent {
+    fn from(event: ProcessEvent) -> Self {
+        match event {
+            ProcessEvent::ProcessStarted(info) => MonitorEvent::ProcessStarted { info },
+            ProcessEvent::ProcessStopped { info, exit_code } => {
+                MonitorEvent::ProcessStopped { info, exit_code }
+            }
         }
     }
 }

@@ -2,5 +2,6 @@
 
 pub mod events;
 pub mod frontmatter;
+pub mod process;
 pub mod session;
 pub mod watcher;
