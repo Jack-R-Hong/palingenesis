@@ -45,7 +45,7 @@ development_status:
   epic-2: in-progress
   2-1-file-system-watcher-setup: done
   2-2-session-file-parser-frontmatter-extraction: done
-  2-3-process-detection-opencode-start-stop: ready-for-dev
+  2-3-process-detection-opencode-start-stop: done
   2-4-stop-reason-classification-rate-limit: ready-for-dev
   2-5-stop-reason-classification-context-exhaustion: ready-for-dev
   2-6-stop-reason-classification-user-exit: ready-for-dev
