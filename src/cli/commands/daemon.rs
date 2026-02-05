@@ -73,8 +73,38 @@ pub async fn handle_restart() -> anyhow::Result<()> {
 }
 
 pub async fn handle_reload() -> anyhow::Result<()> {
-    println!("daemon reload not implemented (Story 4.6)");
-    Ok(())
+    use crate::daemon::pid::PidFile;
+
+    let pid_file = PidFile::new();
+
+    let pid = match pid_file.read() {
+        Ok(pid) => pid,
+        Err(_) => {
+            println!("Daemon not running");
+            return Ok(());
+        }
+    };
+
+    if !PidFile::is_process_running(pid)? {
+        println!("Daemon not running");
+        return Ok(());
+    }
+
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::{kill, Signal};
+        use nix::unistd::Pid;
+
+        kill(Pid::from_raw(pid as i32), Signal::SIGHUP)?;
+        println!("Sent reload signal to daemon (PID: {pid})");
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        anyhow::bail!("Reload is not supported on this platform");
+    }
 }
 
 pub async fn handle_status(json: bool) -> anyhow::Result<()> {

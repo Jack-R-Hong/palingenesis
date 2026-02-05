@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
+use tokio::sync::mpsc;
+use tokio::time;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::daemon::pid::{PidError, PidFile};
 use crate::daemon::shutdown::{ShutdownCoordinator, ShutdownResult};
-use crate::daemon::signals::wait_for_shutdown_signal;
+use crate::daemon::signals::{listen_for_signals, DaemonSignal};
 use crate::daemon::state::DaemonState;
-use crate::ipc::socket::{IpcError, IpcServer};
+use crate::ipc::socket::{DaemonStateAccess, IpcError, IpcServer};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DaemonError {
@@ -47,11 +50,38 @@ impl Daemon {
 
         let cancel = self.shutdown.cancel_token();
 
+        let (signal_tx, mut signal_rx) = mpsc::channel(4);
         let signal_cancel = cancel.clone();
         self.shutdown
             .register_task(tokio::spawn(async move {
-                wait_for_shutdown_signal(signal_cancel).await;
+                listen_for_signals(signal_tx, signal_cancel).await;
             }));
+
+        let signal_state = Arc::clone(&self.state);
+        let signal_cancel = cancel.clone();
+        self.shutdown.register_task(tokio::spawn(async move {
+            while let Some(signal) = signal_rx.recv().await {
+                match signal {
+                    DaemonSignal::Shutdown => {
+                        signal_cancel.cancel();
+                        break;
+                    }
+                    DaemonSignal::Reload => {
+                        if let Err(err) = signal_state.reload_config() {
+                            error!(error = %err, "Failed to reload configuration");
+                        }
+                    }
+                }
+            }
+        }));
+
+        if self.state.auto_detect_active() {
+            let detection_state = Arc::clone(&self.state);
+            let detection_cancel = cancel.clone();
+            self.shutdown.register_task(tokio::spawn(async move {
+                run_auto_detection(detection_state, detection_cancel).await;
+            }));
+        }
 
         let server = std::mem::take(&mut self.ipc_server);
         let server_state = Arc::clone(&self.state);
@@ -77,6 +107,20 @@ impl Daemon {
 
         self.pid_file.release()?;
         Ok(())
+    }
+}
+
+async fn run_auto_detection(state: Arc<DaemonState>, cancel: CancellationToken) {
+    let mut interval = time::interval(state.auto_detect_interval());
+    loop {
+        tokio::select! {
+            _ = cancel.cancelled() => {
+                break;
+            }
+            _ = interval.tick() => {
+                state.refresh_auto_detected_assistants();
+            }
+        }
     }
 }
 
