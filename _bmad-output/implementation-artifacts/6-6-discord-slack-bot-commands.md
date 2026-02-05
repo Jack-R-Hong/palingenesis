@@ -6,7 +6,7 @@
 |-------|-------|
 | Story ID | 6-6 |
 | Epic | Epic 6: Remote Control & External API |
-| Status | ready-for-dev |
+| Status | review |
 | Priority | Medium |
 | Estimate | 5 story points |
 
@@ -85,128 +85,128 @@ Both approaches:
 
 **File:** `src/bot/commands.rs` (new)
 
-- [ ] Create `BotCommand` enum: `Status`, `Pause`, `Resume`, `Logs { tail: usize }`, `NewSession`, `Help`
-- [ ] Implement `FromStr` for parsing command strings like `/palin status`
-- [ ] Create `BotCommandResult` struct for command responses
-- [ ] Implement `BotCommandResult::to_discord_response()` and `to_slack_response()`
-- [ ] Add error variants for unknown command, missing args, etc.
+- [x] Create `BotCommand` enum: `Status`, `Pause`, `Resume`, `Logs { tail: usize }`, `NewSession`, `Help`
+- [x] Implement `FromStr` for parsing command strings like `/palin status`
+- [x] Create `BotCommandResult` struct for command responses
+- [x] Implement `BotCommandResult::to_discord_response()` and `to_slack_response()`
+- [x] Add error variants for unknown command, missing args, etc.
 
 ### Task 2: Create Command Executor
 
 **File:** `src/bot/executor.rs` (new)
 
-- [ ] Create `CommandExecutor` struct holding reference to `DaemonState`
-- [ ] Implement `execute(cmd: BotCommand) -> BotCommandResult`
-- [ ] Status command: call internal status logic (reuse from status handler)
-- [ ] Pause command: call `DaemonState::pause()`
-- [ ] Resume command: call `DaemonState::resume()`
-- [ ] Logs command: read recent log entries (implement or stub)
-- [ ] NewSession command: trigger new session
-- [ ] Help command: return available commands list
+- [x] Create `CommandExecutor` struct holding reference to `DaemonState`
+- [x] Implement `execute(cmd: BotCommand) -> BotCommandResult`
+- [x] Status command: call internal status logic (reuse from status handler)
+- [x] Pause command: call `DaemonState::pause()`
+- [x] Resume command: call `DaemonState::resume()`
+- [x] Logs command: read recent log entries (implement or stub)
+- [x] NewSession command: trigger new session
+- [x] Help command: return available commands list
 
 ### Task 3: Create Authorization Layer
 
 **File:** `src/bot/auth.rs` (new)
 
-- [ ] Create `BotAuth` struct with `allowed_users: HashSet<String>`
-- [ ] Implement `is_authorized(user_id: &str) -> bool`
-- [ ] Load allowed users from config (Discord user IDs, Slack user IDs)
-- [ ] Add `bot` section to config schema with `authorized_users`
-- [ ] If no authorized_users configured, allow all (or deny all based on config flag)
+- [x] Create `BotAuth` struct with `allowed_users: HashSet<String>`
+- [x] Implement `is_authorized(user_id: &str) -> bool`
+- [x] Load allowed users from config (Discord user IDs, Slack user IDs)
+- [x] Add `bot` section to config schema with `authorized_users`
+- [x] If no authorized_users configured, allow all (or deny all based on config flag)
 
 ### Task 4: Discord Webhook Handler
 
 **File:** `src/http/handlers/bot_discord.rs` (new)
 
-- [ ] Create `discord_webhook_handler` accepting Discord interaction payload
-- [ ] Verify Discord signature (Ed25519) for security
-- [ ] Parse interaction type (PING vs APPLICATION_COMMAND)
-- [ ] For PING: respond with type 1 (required for Discord verification)
-- [ ] For APPLICATION_COMMAND: extract command name and options
-- [ ] Check authorization using Discord user ID
-- [ ] Execute command via `CommandExecutor`
-- [ ] Format response as Discord interaction response (type 4)
+- [x] Create `discord_webhook_handler` accepting Discord interaction payload
+- [x] Verify Discord signature (Ed25519) for security
+- [x] Parse interaction type (PING vs APPLICATION_COMMAND)
+- [x] For PING: respond with type 1 (required for Discord verification)
+- [x] For APPLICATION_COMMAND: extract command name and options
+- [x] Check authorization using Discord user ID
+- [x] Execute command via `CommandExecutor`
+- [x] Format response as Discord interaction response (type 4)
 
 ### Task 5: Slack Webhook Handler
 
 **File:** `src/http/handlers/bot_slack.rs` (new)
 
-- [ ] Create `slack_webhook_handler` accepting Slack slash command payload
-- [ ] Verify Slack signature (HMAC-SHA256) for security
-- [ ] Parse command text (e.g., "status" from `/palin status`)
-- [ ] Check authorization using Slack user ID
-- [ ] Execute command via `CommandExecutor`
-- [ ] Format response as Slack block kit message or plain text
-- [ ] Support both immediate response and delayed response (response_url)
+- [x] Create `slack_webhook_handler` accepting Slack slash command payload
+- [x] Verify Slack signature (HMAC-SHA256) for security
+- [x] Parse command text (e.g., "status" from `/palin status`)
+- [x] Check authorization using Slack user ID
+- [x] Execute command via `CommandExecutor`
+- [x] Format response as Slack block kit message or plain text
+- [x] Support both immediate response and delayed response (response_url)
 
 ### Task 6: Add Bot Routes to HTTP Server
 
 **File:** `src/http/server.rs`
 
-- [ ] Add `POST /api/v1/bot/discord` route for Discord interactions
-- [ ] Add `POST /api/v1/bot/slack` route for Slack slash commands
-- [ ] Inject `CommandExecutor` and `BotAuth` into handler state
-- [ ] Ensure routes work without breaking existing endpoints
+- [x] Add `POST /api/v1/bot/discord` route for Discord interactions
+- [x] Add `POST /api/v1/bot/slack` route for Slack slash commands
+- [x] Inject `CommandExecutor` and `BotAuth` into handler state
+- [x] Ensure routes work without breaking existing endpoints
 
 ### Task 7: Update Configuration Schema
 
 **File:** `src/config/schema.rs`
 
-- [ ] Add `BotConfig` struct with:
+- [x] Add `BotConfig` struct with:
   - `enabled: bool`
   - `discord_application_id: Option<String>`
   - `discord_public_key: Option<String>` (for signature verification)
   - `slack_signing_secret: Option<String>` (for signature verification)
   - `authorized_users: Vec<AuthorizedUser>`
-- [ ] Add `AuthorizedUser` struct: `{ platform: Platform, user_id: String }`
-- [ ] Add `bot` section to main `Config` struct
-- [ ] Update config validation to check bot config consistency
+- [x] Add `AuthorizedUser` struct: `{ platform: Platform, user_id: String }`
+- [x] Add `bot` section to main `Config` struct
+- [x] Update config validation to check bot config consistency
 
 ### Task 8: Create Bot Module
 
 **File:** `src/bot/mod.rs` (new)
 
-- [ ] Export `commands`, `executor`, `auth` modules
-- [ ] Add module to `src/lib.rs`
+- [x] Export `commands`, `executor`, `auth` modules
+- [x] Add module to `src/lib.rs`
 
 ### Task 9: Update Handlers Module
 
 **File:** `src/http/handlers/mod.rs`
 
-- [ ] Add `pub mod bot_discord;`
-- [ ] Add `pub mod bot_slack;`
-- [ ] Export bot handlers
+- [x] Add `pub mod bot_discord;`
+- [x] Add `pub mod bot_slack;`
+- [x] Export bot handlers
 
 ### Task 10: Write Unit Tests
 
 **File:** `src/bot/commands.rs` (tests module)
 
-- [ ] Test `BotCommand` parsing from string
-- [ ] Test `/palin status` parses to `Status`
-- [ ] Test `/palin logs --tail 5` parses to `Logs { tail: 5 }`
-- [ ] Test invalid command returns error
+- [x] Test `BotCommand` parsing from string
+- [x] Test `/palin status` parses to `Status`
+- [x] Test `/palin logs --tail 5` parses to `Logs { tail: 5 }`
+- [x] Test invalid command returns error
 
 **File:** `src/bot/executor.rs` (tests module)
 
-- [ ] Test status command returns current state
-- [ ] Test pause command updates state
-- [ ] Test resume command updates state
+- [x] Test status command returns current state
+- [x] Test pause command updates state
+- [x] Test resume command updates state
 
 **File:** `src/bot/auth.rs` (tests module)
 
-- [ ] Test authorized user passes check
-- [ ] Test unauthorized user fails check
-- [ ] Test empty authorized list behavior
+- [x] Test authorized user passes check
+- [x] Test unauthorized user fails check
+- [x] Test empty authorized list behavior
 
 ### Task 11: Write Integration Tests
 
 **File:** `tests/bot_integration.rs` (new)
 
-- [ ] Test Discord webhook endpoint accepts valid request
-- [ ] Test Discord webhook rejects invalid signature
-- [ ] Test Slack webhook endpoint accepts valid request
-- [ ] Test Slack webhook rejects invalid signature
-- [ ] Test unauthorized user receives rejection message
+- [x] Test Discord webhook endpoint accepts valid request
+- [x] Test Discord webhook rejects invalid signature
+- [x] Test Slack webhook endpoint accepts valid request
+- [x] Test Slack webhook rejects invalid signature
+- [x] Test unauthorized user receives rejection message
 
 ## Dependencies
 
@@ -220,17 +220,17 @@ Both approaches:
 
 ## Definition of Done
 
-- [ ] Discord interactions endpoint responds to slash commands
-- [ ] Slack slash command endpoint responds to commands
-- [ ] Status command returns daemon status on both platforms
-- [ ] Pause command pauses daemon on both platforms
-- [ ] Resume command resumes daemon on both platforms
-- [ ] Logs command returns recent log lines
-- [ ] Unauthorized users receive rejection message
-- [ ] Signature verification protects both endpoints
-- [ ] All tests pass
-- [ ] Code follows project conventions (clippy, fmt)
-- [ ] Handlers are documented with rustdoc comments
+- [x] Discord interactions endpoint responds to slash commands
+- [x] Slack slash command endpoint responds to commands
+- [x] Status command returns daemon status on both platforms
+- [x] Pause command pauses daemon on both platforms
+- [x] Resume command resumes daemon on both platforms
+- [x] Logs command returns recent log lines
+- [x] Unauthorized users receive rejection message
+- [x] Signature verification protects both endpoints
+- [x] All tests pass
+- [x] Code follows project conventions (clippy, fmt)
+- [x] Handlers are documented with rustdoc comments
 
 ## Out of Scope
 
@@ -268,3 +268,41 @@ Both approaches:
 - Log lines should be truncated to fit platform message limits (Discord: 2000 chars, Slack: 3000 chars)
 - User IDs are platform-specific: Discord snowflakes vs Slack member IDs
 
+## Dev Agent Record
+
+### Implementation Plan
+- Add bot command types, executor, and authorization helpers.
+- Implement Discord and Slack webhook handlers with signature verification.
+- Wire routes, config schema, and validation updates.
+- Add unit/integration tests and verify with build/tests.
+
+### Completion Notes
+- Added bot command parsing, execution, and authorization flows with formatted Discord/Slack responses.
+- Implemented Discord/Slack webhook handlers with signature verification and router wiring.
+- Updated config schema/validation, event tracking, and added integration tests.
+- Verified with `cargo build` and `cargo test`.
+
+## File List
+- Cargo.toml
+- src/bot/auth.rs
+- src/bot/commands.rs
+- src/bot/discord.rs
+- src/bot/executor.rs
+- src/bot/mod.rs
+- src/bot/slack.rs
+- src/config/schema.rs
+- src/config/validation.rs
+- src/daemon/state.rs
+- src/http/events.rs
+- src/http/handlers/bot_discord.rs
+- src/http/handlers/bot_slack.rs
+- src/http/handlers/control.rs
+- src/http/handlers/mod.rs
+- src/http/handlers/status.rs
+- src/http/server.rs
+- src/lib.rs
+- src/notify/events.rs
+- tests/bot_integration.rs
+
+## Change Log
+- 2026-02-06: Added bot webhook handling, authorization, config schema updates, and tests.
