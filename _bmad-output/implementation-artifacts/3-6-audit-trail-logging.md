@@ -1,6 +1,6 @@
 # Story 3.6: Audit Trail Logging
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -43,60 +43,60 @@ So that I have a history of actions for debugging and metrics.
 
 ## Tasks / Subtasks
 
-- [ ] Create AuditLogger struct (AC: 1, 2, 3)
-  - [ ] Create `src/state/audit.rs`
-  - [ ] Define AuditConfig with file path and rotation settings
-  - [ ] Implement file creation with proper permissions
-  - [ ] Implement append-only writing
+- [x] Create AuditLogger struct (AC: 1, 2, 3)
+  - [x] Create `src/state/audit.rs`
+  - [x] Define AuditConfig with file path and rotation settings
+  - [x] Implement file creation with proper permissions
+  - [x] Implement append-only writing
 
-- [ ] Define AuditEntry struct (AC: 2)
-  - [ ] Add timestamp: DateTime<Utc>
-  - [ ] Add event_type: AuditEventType enum
-  - [ ] Add session_path: Option<PathBuf>
-  - [ ] Add stop_reason: Option<String>
-  - [ ] Add action_taken: String
-  - [ ] Add outcome: AuditOutcome enum
-  - [ ] Add metadata: HashMap<String, Value>
+- [x] Define AuditEntry struct (AC: 2)
+  - [x] Add timestamp: DateTime<Utc>
+  - [x] Add event_type: AuditEventType enum
+  - [x] Add session_path: Option<PathBuf>
+  - [x] Add stop_reason: Option<String>
+  - [x] Add action_taken: String
+  - [x] Add outcome: AuditOutcome enum
+  - [x] Add metadata: HashMap<String, Value>
 
-- [ ] Implement JSONL writing (AC: 1, 5)
-  - [ ] Serialize entry to JSON
-  - [ ] Append newline
-  - [ ] Use file locking for concurrent safety
-  - [ ] Flush after each write
+- [x] Implement JSONL writing (AC: 1, 5)
+  - [x] Serialize entry to JSON
+  - [x] Append newline
+  - [x] Use file locking for concurrent safety
+  - [x] Flush after each write
 
-- [ ] Implement file rotation (AC: 4)
-  - [ ] Check file size before write
-  - [ ] Rotate when size exceeds threshold
-  - [ ] Rename current to .1, .2, etc.
-  - [ ] Create new empty file
-  - [ ] Limit number of rotated files
+- [x] Implement file rotation (AC: 4)
+  - [x] Check file size before write
+  - [x] Rotate when size exceeds threshold
+  - [x] Rename current to .1, .2, etc.
+  - [x] Create new empty file
+  - [x] Limit number of rotated files
 
-- [ ] Implement query support (AC: 6)
-  - [ ] Read and parse JSONL file
-  - [ ] Filter by event_type
-  - [ ] Filter by time range
-  - [ ] Filter by session_path
-  - [ ] Return iterator over matching entries
+- [x] Implement query support (AC: 6)
+  - [x] Read and parse JSONL file
+  - [x] Filter by event_type
+  - [x] Filter by time range
+  - [x] Filter by session_path
+  - [x] Return iterator over matching entries
 
-- [ ] Add convenience methods (AC: 1, 2)
-  - [ ] log_resume_started()
-  - [ ] log_resume_completed()
-  - [ ] log_resume_failed()
-  - [ ] log_session_created()
-  - [ ] log_session_backed_up()
+- [x] Add convenience methods (AC: 1, 2)
+  - [x] log_resume_started()
+  - [x] log_resume_completed()
+  - [x] log_resume_failed()
+  - [x] log_session_created()
+  - [x] log_session_backed_up()
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test entry serialization
-  - [ ] Test file creation with permissions
-  - [ ] Test append-only behavior
-  - [ ] Test file rotation
-  - [ ] Test concurrent writes
-  - [ ] Test query filtering
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test entry serialization
+  - [x] Test file creation with permissions
+  - [x] Test append-only behavior
+  - [x] Test file rotation
+  - [x] Test concurrent writes
+  - [x] Test query filtering
 
-- [ ] Add integration tests
-  - [ ] Test with resume strategies
-  - [ ] Test rotation under load
-  - [ ] Test recovery from corrupted file
+- [x] Add integration tests
+  - [x] Test with resume strategies
+  - [x] Test rotation under load
+  - [x] Test recovery from corrupted file
 
 ## Dev Notes
 
@@ -602,8 +602,12 @@ file.unlock()?;
 
 **Files to modify:**
 - `src/state/mod.rs` (add audit module)
+- `src/resume/new_session.rs` (audit logging hooks)
+- `src/resume/same_session.rs` (audit logging hooks)
+- `_bmad-output/implementation-artifacts/3-6-audit-trail-logging.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented audit logger, rotation, queries, and tests
