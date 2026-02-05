@@ -3,6 +3,7 @@
 pub mod events;
 pub mod classifier;
 pub mod core;
+pub mod detection;
 pub mod frontmatter;
 pub mod process;
 pub mod session;
