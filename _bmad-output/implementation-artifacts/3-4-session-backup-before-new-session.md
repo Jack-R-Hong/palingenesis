@@ -1,6 +1,6 @@
 # Story 3.4: Session Backup Before New Session
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -46,48 +46,48 @@ So that I can recover if something goes wrong.
 
 ## Tasks / Subtasks
 
-- [ ] Create SessionBackup struct (AC: 1, 5)
-  - [ ] Create `src/resume/backup.rs`
-  - [ ] Add configuration for max_backups
-  - [ ] Add configuration for timestamp format
-  - [ ] Implement timestamp generation
+- [x] Create SessionBackup struct (AC: 1, 5)
+  - [x] Create `src/resume/backup.rs`
+  - [x] Add configuration for max_backups
+  - [x] Add configuration for timestamp format
+  - [x] Implement timestamp generation
 
-- [ ] Implement backup creation (AC: 1, 2, 5)
-  - [ ] Generate backup filename with timestamp
-  - [ ] Copy session file to backup location
-  - [ ] Preserve file metadata if possible
-  - [ ] Return backup path on success
+- [x] Implement backup creation (AC: 1, 2, 5)
+  - [x] Generate backup filename with timestamp
+  - [x] Copy session file to backup location
+  - [x] Preserve file metadata if possible
+  - [x] Return backup path on success
 
-- [ ] Implement backup verification (AC: 6)
-  - [ ] Compare file sizes
-  - [ ] Optionally verify content hash
-  - [ ] Check file readability
-  - [ ] Log verification result
+- [x] Implement backup verification (AC: 6)
+  - [x] Compare file sizes
+  - [x] Optionally verify content hash
+  - [x] Check file readability
+  - [x] Log verification result
 
-- [ ] Implement error handling (AC: 3)
-  - [ ] Catch I/O errors gracefully
-  - [ ] Log detailed error information
-  - [ ] Return Result for caller decision
-  - [ ] Don't block on backup failure
+- [x] Implement error handling (AC: 3)
+  - [x] Catch I/O errors gracefully
+  - [x] Log detailed error information
+  - [x] Return Result for caller decision
+  - [x] Don't block on backup failure
 
-- [ ] Implement backup pruning (AC: 4)
-  - [ ] List existing backups in directory
-  - [ ] Sort by timestamp (oldest first)
-  - [ ] Delete oldest when count exceeds max
-  - [ ] Log pruned backups
+- [x] Implement backup pruning (AC: 4)
+  - [x] List existing backups in directory
+  - [x] Sort by timestamp (oldest first)
+  - [x] Delete oldest when count exceeds max
+  - [x] Log pruned backups
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test backup creation
-  - [ ] Test timestamp format
-  - [ ] Test backup verification
-  - [ ] Test error handling (disk full simulation)
-  - [ ] Test pruning logic
-  - [ ] Test concurrent backup operations
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test backup creation
+  - [x] Test timestamp format
+  - [x] Test backup verification
+  - [x] Test error handling (disk full simulation)
+  - [x] Test pruning logic
+  - [x] Test concurrent backup operations
 
-- [ ] Add integration tests
-  - [ ] Test full backup flow
-  - [ ] Test backup + new session integration
-  - [ ] Test pruning with multiple backups
+- [x] Add integration tests
+  - [x] Test full backup flow
+  - [x] Test backup + new session integration
+  - [x] Test pruning with multiple backups
 
 ## Dev Notes
 
@@ -448,8 +448,12 @@ if self.config.enable_backup {
 
 **Files to modify:**
 - `src/resume/mod.rs` (add backup module)
+- `src/resume/new_session.rs` (wire backup config and logging)
+- `tests/new_session_strategy_test.rs` (backup error type update)
+- `_bmad-output/implementation-artifacts/3-4-session-backup-before-new-session.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented session backup flow, pruning, verification, and tests
