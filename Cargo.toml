@@ -41,6 +41,7 @@ tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter"] }
 # Error handling
 thiserror = "2.0.17"
 anyhow = "1.0.100"
+async-trait = "0.1"
 
 # Platform directories
 dirs = "6.0"
