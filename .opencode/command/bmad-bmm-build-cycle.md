@@ -27,12 +27,83 @@ As Sisyphus, you are the **orchestrator**. You **NEVER execute bmad-method workf
 ## Subagent Responsibilities
 
 When delegated, the **subagent** is responsible for:
-1. Loading its own agent persona from `_bmad/{module}/agents/{agent}.md`
-2. Executing the specified bmad workflow (e.g., `/bmad-bmm-sprint-planning`)
-3. Making autonomous decisions during workflow execution
-4. Updating `sprint-status.yaml` with new status
-5. Committing changes upon completion
-6. Return only: `DONE` or `FAILED: {reason}`
+1. **Log task start** (FIRST action - see Task Logging below)
+2. Loading its own agent persona from `_bmad/{module}/agents/{agent}.md`
+3. Executing the specified bmad workflow (e.g., `/bmad-bmm-sprint-planning`)
+4. Making autonomous decisions during workflow execution
+5. Updating `sprint-status.yaml` with new status
+6. Committing changes upon completion
+7. **Log task completion** (BEFORE returning - see Task Logging below)
+8. Return only: `DONE` or `FAILED: {reason}`
+
+---
+
+## Task Logging (MANDATORY for all subagents)
+
+Every subagent MUST log execution details to `logs/tasks/{YYYY-MM-DD}.jsonl`.
+
+### On Task Start (FIRST action)
+
+```bash
+# 1. Ensure directory exists
+mkdir -p logs/tasks
+
+# 2. Write start entry
+echo '{"task_id":"task_'$(date +%Y%m%d_%H%M%S)'_'$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 4)'","model":"YOUR_MODEL_ID","start_time":"'$(date -Iseconds)'","start_condition":"TASK_DESCRIPTION","delegator":"sisyphus","status":"started"}' >> logs/tasks/$(date +%Y-%m-%d).jsonl
+```
+
+### On Task Completion (BEFORE returning)
+
+```bash
+# Write completion entry with elapsed time
+echo '{"task_id":"SAME_TASK_ID","model":"YOUR_MODEL_ID","start_time":"START_TIME","end_time":"'$(date -Iseconds)'","elapsed_time_seconds":CALCULATED,"elapsed_time_human":"Xm Ys","start_condition":"TASK_DESCRIPTION","end_result":"success|failure|partial","result_details":"BRIEF_SUMMARY","delegator":"sisyphus","status":"completed"}' >> logs/tasks/$(date +%Y-%m-%d).jsonl
+```
+
+### Log Entry Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `task_id` | YES | Unique ID: `task_{timestamp}_{random4}` |
+| `model` | YES | Model identifier (e.g., `anthropic/claude-sonnet-4-5`) |
+| `start_time` | YES | ISO 8601 timestamp |
+| `end_time` | On complete | ISO 8601 timestamp |
+| `elapsed_time_seconds` | On complete | Duration in seconds |
+| `elapsed_time_human` | On complete | Human-readable (e.g., `4m 32s`) |
+| `start_condition` | YES | The bmad workflow command executed |
+| `end_result` | On complete | `success` / `failure` / `partial` |
+| `result_details` | On complete | Brief summary of outcome |
+| `delegator` | YES | Always `sisyphus` for build-cycle |
+| `status` | YES | `started` / `completed` / `failed` |
+
+### Example Log Sequence
+
+**Task starts:**
+```json
+{"task_id":"task_20260205_101523_x7k2","model":"anthropic/claude-sonnet-4-5","start_time":"2026-02-05T10:15:23+08:00","start_condition":"/bmad-bmm-dev-story Story: epic-1/story-1-2","delegator":"sisyphus","status":"started"}
+```
+
+**Task completes:**
+```json
+{"task_id":"task_20260205_101523_x7k2","model":"anthropic/claude-sonnet-4-5","start_time":"2026-02-05T10:15:23+08:00","end_time":"2026-02-05T10:28:47+08:00","elapsed_time_seconds":804,"elapsed_time_human":"13m 24s","start_condition":"/bmad-bmm-dev-story Story: epic-1/story-1-2","end_result":"success","result_details":"Implemented 3 files, added 5 tests, all passing","delegator":"sisyphus","status":"completed"}
+```
+
+### Querying Task Logs
+
+```bash
+# Today's tasks
+cat logs/tasks/$(date +%Y-%m-%d).jsonl
+
+# Failed tasks
+grep '"status":"failed"' logs/tasks/*.jsonl
+
+# Tasks by model
+grep '"model":"anthropic/claude-opus-4-5"' logs/tasks/*.jsonl
+
+# Total time spent today
+jq -s '[.[].elapsed_time_seconds // 0] | add' logs/tasks/$(date +%Y-%m-%d).jsonl
+```
+
+**CRITICAL**: Logging failures should NOT block the main task. If logging fails, note it in the response but continue execution.
 
 ---
 
@@ -84,7 +155,8 @@ delegate_task(
   category="unspecified-high",
   load_skills=["git-master"],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-sprint-planning. Autonomous mode. Commit when done."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-sprint-planning. Autonomous mode. Commit when done.`
 )
 // AFTER: Read sprint-status.yaml to confirm creation
 ```
@@ -97,7 +169,8 @@ delegate_task(
   category="unspecified-high", 
   load_skills=["git-master"],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-create-story. Autonomous mode. Commit when done."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-create-story. Autonomous mode. Commit when done.`
 )
 // AFTER: Read sprint-status.yaml, confirm story status changed
 ```
@@ -110,7 +183,8 @@ delegate_task(
   category="deep",
   load_skills=["git-master"],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-dev-story. Story: {story_path}. Autonomous mode. Commit when done."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-dev-story. Story: {story_path}. Autonomous mode. Commit when done.`
 )
 // AFTER: Read sprint-status.yaml, confirm story → review
 ```
@@ -123,7 +197,8 @@ delegate_task(
   category="unspecified-high",
   load_skills=["git-master"],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-code-review. Story: {story_path}. Autonomous mode. Commit fixes if any."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-code-review. Story: {story_path}. Autonomous mode. Commit fixes if any.`
 )
 // AFTER: Read sprint-status.yaml, confirm story → done
 ```
@@ -136,7 +211,8 @@ delegate_task(
   category="unspecified-high",
   load_skills=["git-master"],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-retrospective. Epic: {epic_num}. Autonomous mode. Commit when done."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-retrospective. Epic: {epic_num}. Autonomous mode. Commit when done.`
 )
 // AFTER: Read sprint-status.yaml, confirm epic closed
 ```
@@ -213,7 +289,8 @@ delegate_task(
   category="unspecified-high",
   load_skills=[],
   run_in_background=false,
-  prompt="Execute /bmad-bmm-correct-course. Autonomous mode."
+  prompt=`LOG TASK to logs/tasks/{date}.jsonl (start+end).
+Execute /bmad-bmm-correct-course. Autonomous mode.`
 )
 // AFTER: Read sprint-status.yaml for changes
 ```
