@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
+use crate::monitor::classifier::StopReason;
 use crate::monitor::process::{ProcessEvent, ProcessInfo};
 use crate::monitor::session::Session;
 
@@ -42,6 +43,7 @@ pub enum MonitorEvent {
     ProcessStopped {
         info: ProcessInfo,
         exit_code: Option<i32>,
+        stop_reason: Option<StopReason>,
     },
     /// Watcher or parser encountered an error.
     Error(String),
@@ -80,9 +82,11 @@ impl From<ProcessEvent> for MonitorEvent {
     fn from(event: ProcessEvent) -> Self {
         match event {
             ProcessEvent::ProcessStarted(info) => MonitorEvent::ProcessStarted { info },
-            ProcessEvent::ProcessStopped { info, exit_code } => {
-                MonitorEvent::ProcessStopped { info, exit_code }
-            }
+            ProcessEvent::ProcessStopped { info, exit_code } => MonitorEvent::ProcessStopped {
+                info,
+                exit_code,
+                stop_reason: None,
+            },
         }
     }
 }

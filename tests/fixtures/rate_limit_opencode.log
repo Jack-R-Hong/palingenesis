@@ -1,0 +1,2 @@
+2026-02-05T08:12:34Z opencode[4432]: ERROR rate_limit_error request failed status=429 Retry-After: 30
+2026-02-05T08:12:34Z opencode[4432]: INFO try again in 30 seconds
