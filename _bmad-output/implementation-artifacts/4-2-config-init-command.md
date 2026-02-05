@@ -1,6 +1,6 @@
 # Story 4.2: Config Init Command
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -45,51 +45,51 @@ So that I have a starting point for customization.
 
 ## Tasks / Subtasks
 
-- [ ] Add config init subcommand to CLI (AC: 1, 4, 5)
-  - [ ] Add `init` subcommand to `ConfigCmd` enum in CLI
-  - [ ] Add `--force` flag for overwrite without prompt
-  - [ ] Add `--path` option for custom config path
+- [x] Add config init subcommand to CLI (AC: 1, 4, 5)
+  - [x] Add `init` subcommand to `ConfigCmd` enum in CLI
+  - [x] Add `--force` flag for overwrite without prompt
+  - [x] Add `--path` option for custom config path
 
-- [ ] Implement config init handler (AC: 1, 6)
-  - [ ] Create `src/cli/commands/config.rs` init handler
-  - [ ] Resolve platform-specific default path
-  - [ ] Create parent directories if needed
-  - [ ] Generate default config content
+- [x] Implement config init handler (AC: 1, 6)
+  - [x] Create `src/cli/commands/config.rs` init handler
+  - [x] Resolve platform-specific default path
+  - [x] Create parent directories if needed
+  - [x] Generate default config content
 
-- [ ] Generate commented TOML (AC: 3)
-  - [ ] Create `generate_default_config_toml()` function
-  - [ ] Include header comments explaining the file
-  - [ ] Include section comments for each config block
-  - [ ] Include inline comments for each field
-  - [ ] Use TOML formatting with proper indentation
+- [x] Generate commented TOML (AC: 3)
+  - [x] Create `generate_default_config_toml()` function
+  - [x] Include header comments explaining the file
+  - [x] Include section comments for each config block
+  - [x] Include inline comments for each field
+  - [x] Use TOML formatting with proper indentation
 
-- [ ] Implement overwrite protection (AC: 2)
-  - [ ] Check if config file already exists
-  - [ ] Prompt user for confirmation (y/n)
-  - [ ] Read stdin for user response
-  - [ ] Abort if user declines
+- [x] Implement overwrite protection (AC: 2)
+  - [x] Check if config file already exists
+  - [x] Prompt user for confirmation (y/n)
+  - [x] Read stdin for user response
+  - [x] Abort if user declines
 
-- [ ] Handle force flag (AC: 4)
-  - [ ] Skip existence check when --force is set
-  - [ ] Overwrite existing file directly
+- [x] Handle force flag (AC: 4)
+  - [x] Skip existence check when --force is set
+  - [x] Overwrite existing file directly
 
-- [ ] Set file permissions (AC: 3)
-  - [ ] Set permissions to 600 (owner read/write only)
-  - [ ] Use platform-specific permission APIs
-  - [ ] Log warning if permissions cannot be set
+- [x] Set file permissions (AC: 3)
+  - [x] Set permissions to 600 (owner read/write only)
+  - [x] Use platform-specific permission APIs
+  - [x] Log warning if permissions cannot be set
 
-- [ ] Add success output (AC: 1)
-  - [ ] Print "Config created at {path}" on success
-  - [ ] Use colored output for visibility
-  - [ ] Include hint about editing the config
+- [x] Add success output (AC: 1)
+  - [x] Print "Config created at {path}" on success
+  - [x] Use colored output for visibility
+  - [x] Include hint about editing the config
 
-- [ ] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test config init creates file
-  - [ ] Test config init with --force
-  - [ ] Test config init with --path
-  - [ ] Test overwrite prompt
-  - [ ] Test directory creation
-  - [ ] Test file permissions
+- [x] Add unit/integration tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test config init creates file
+  - [x] Test config init with --force
+  - [x] Test config init with --path
+  - [x] Test overwrite prompt
+  - [x] Test directory creation
+  - [x] Test file permissions
 
 ## Dev Notes
 
@@ -299,8 +299,10 @@ Uses existing dependencies:
 **Files to modify:**
 - `src/cli/app.rs`
 - `src/cli/commands/config.rs`
-- `_bmad-output/sprint-status.yaml`
+- `src/main.rs`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented config init CLI, commented TOML generation, and tests

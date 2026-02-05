@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -70,7 +72,14 @@ pub enum DaemonAction {
 #[derive(clap::Subcommand, Debug)]
 pub enum ConfigAction {
     /// Initialize configuration file
-    Init,
+    Init {
+        /// Overwrite existing config without asking
+        #[arg(long)]
+        force: bool,
+        /// Custom path for config file
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
     /// Show current configuration
     Show,
     /// Validate configuration
@@ -82,6 +91,7 @@ pub enum ConfigAction {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_cli_parses_with_no_subcommand() {
@@ -278,9 +288,47 @@ mod tests {
         let cli = Cli::try_parse_from(["palingenesis", "config", "init"]).unwrap();
         match cli.command {
             Some(Commands::Config {
-                action: ConfigAction::Init,
-            }) => {}
+                action: ConfigAction::Init { force, path },
+            }) => {
+                assert!(!force);
+                assert!(path.is_none());
+            }
             _ => panic!("Expected Config Init command"),
+        }
+    }
+
+    #[test]
+    fn test_config_init_command_with_force() {
+        let cli = Cli::try_parse_from(["palingenesis", "config", "init", "--force"]).unwrap();
+        match cli.command {
+            Some(Commands::Config {
+                action: ConfigAction::Init { force, path },
+            }) => {
+                assert!(force);
+                assert!(path.is_none());
+            }
+            _ => panic!("Expected Config Init command with force"),
+        }
+    }
+
+    #[test]
+    fn test_config_init_command_with_path() {
+        let cli = Cli::try_parse_from([
+            "palingenesis",
+            "config",
+            "init",
+            "--path",
+            "/tmp/palingenesis.toml",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Config {
+                action: ConfigAction::Init { force, path },
+            }) => {
+                assert!(!force);
+                assert_eq!(path.as_deref(), Some(Path::new("/tmp/palingenesis.toml")));
+            }
+            _ => panic!("Expected Config Init command with path"),
         }
     }
 
