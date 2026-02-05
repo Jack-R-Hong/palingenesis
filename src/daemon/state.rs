@@ -1,15 +1,16 @@
-use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 use tracing::{error, info, warn};
 
-use crate::config::Paths;
 use crate::config::schema::Config;
 use crate::config::validation::validate_config;
+use crate::config::Paths;
 use crate::ipc::protocol::DaemonStatus;
 use crate::ipc::socket::DaemonStateAccess;
 use crate::monitor::detection::detect_assistants;
+use crate::state::StateStore;
 
 pub struct DaemonState {
     start_time: Instant,
@@ -82,6 +83,7 @@ impl Default for DaemonState {
 
 impl DaemonStateAccess for DaemonState {
     fn get_status(&self) -> DaemonStatus {
+        let time_saved_seconds = StateStore::new().load().stats.time_saved_seconds;
         DaemonStatus {
             state: if self.paused.load(Ordering::SeqCst) {
                 "paused".to_string()
@@ -92,6 +94,7 @@ impl DaemonStateAccess for DaemonState {
             current_session: None,
             saves_count: self.sessions_count.load(Ordering::SeqCst),
             total_resumes: self.resumes_count.load(Ordering::SeqCst),
+            time_saved_seconds,
         }
     }
 

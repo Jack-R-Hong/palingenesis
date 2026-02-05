@@ -26,6 +26,7 @@ impl DaemonStateAccess for MockState {
             current_session: None,
             saves_count: 0,
             total_resumes: 0,
+            time_saved_seconds: 0.0,
         }
     }
 

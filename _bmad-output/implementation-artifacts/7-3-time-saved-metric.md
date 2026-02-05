@@ -5,7 +5,7 @@
 **Epic:** 7 - Observability & Metrics
 **Story ID:** 7-3
 **Title:** Time Saved Metric
-**Status:** ready-for-dev
+**Status:** review
 **Priority:** Growth
 **Story Points:** 3
 
@@ -377,3 +377,48 @@ Time saved: 4.2 hours
 ---
 *Generated: 2026-02-06*
 *Epic Reference: _bmad-output/planning-artifacts/epics.md#story-73-time-saved-metric*
+
+## Tasks/Subtasks
+
+- [x] Add manual restart time configuration with validation
+- [x] Persist cumulative time saved and record on successful resumes
+- [x] Expose time saved metrics via Prometheus
+- [x] Display time saved in status output and JSON
+- [x] Add unit/integration tests for time saved behavior
+
+## Dev Agent Record
+
+### Debug Log
+- No blocking issues encountered.
+
+### Completion Notes
+- Implemented time saved calculation, persistence, and metrics recording on successful resumes.
+- Updated status and IPC output to include time saved with human-readable formatting.
+- Tests added for calculation, formatting, metrics output, config validation, and state persistence.
+- Verified with `cargo build` and `cargo test`.
+
+## File List
+- _bmad-output/implementation-artifacts/7-3-time-saved-metric.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- logs/tasks/2026-02-06.jsonl
+- src/config/schema.rs
+- src/config/mod.rs
+- src/config/validation.rs
+- src/state/schema.rs
+- src/state/store.rs
+- src/telemetry/metrics.rs
+- src/resume/time_saved.rs
+- src/resume/mod.rs
+- src/resume/same_session.rs
+- src/resume/new_session.rs
+- src/cli/commands/status.rs
+- src/ipc/protocol.rs
+- src/daemon/state.rs
+- src/http/handlers/metrics.rs
+- src/ipc/socket.rs
+- src/ipc/client.rs
+- src/cli/commands/session.rs
+- tests/ipc_test.rs
+
+## Change Log
+- 2026-02-06: Implemented time saved metric, persistence, status output, and tests.

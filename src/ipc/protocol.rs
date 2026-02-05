@@ -42,13 +42,14 @@ pub enum IpcResponse {
 }
 
 /// Daemon status for STATUS command response.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DaemonStatus {
     pub state: String,
     pub uptime_secs: u64,
     pub current_session: Option<String>,
     pub saves_count: u64,
     pub total_resumes: u64,
+    pub time_saved_seconds: f64,
 }
 
 impl IpcResponse {
@@ -104,6 +105,7 @@ mod tests {
             current_session: Some("/tmp/session.md".to_string()),
             saves_count: 7,
             total_resumes: 3,
+            time_saved_seconds: 360.0,
         };
         let text = IpcResponse::Status(status.clone()).to_text();
         let json = text.trim_end();

@@ -39,6 +39,9 @@ pub struct Config {
     /// Bot command configuration section.
     /// Example: [bot]
     pub bot: BotConfig,
+    /// Metrics configuration section.
+    /// Example: [metrics]
+    pub metrics: MetricsConfig,
     /// Optional OpenTelemetry configuration section.
     /// Example: [otel]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -53,7 +56,25 @@ impl Default for Config {
             resume: ResumeConfig::default(),
             notifications: NotificationsConfig::default(),
             bot: BotConfig::default(),
+            metrics: MetricsConfig::default(),
             otel: None,
+        }
+    }
+}
+
+/// Metrics configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct MetricsConfig {
+    /// Estimated time for manual session restart (seconds).
+    /// Default: 300 (5 minutes)
+    pub manual_restart_time_seconds: u64,
+}
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        Self {
+            manual_restart_time_seconds: default_manual_restart_time_seconds(),
         }
     }
 }
@@ -355,6 +376,10 @@ fn default_metrics_enabled() -> bool {
     true
 }
 
+fn default_manual_restart_time_seconds() -> u64 {
+    300
+}
+
 #[cfg(test)]
 mod tests {
     use super::Config;
@@ -364,5 +389,12 @@ mod tests {
         let config: Config = toml::from_str("[otel]\nmetrics_enabled = false\n").unwrap();
         let otel = config.otel.expect("otel config");
         assert!(!otel.metrics_enabled);
+    }
+
+    #[test]
+    fn test_metrics_manual_restart_time_parsing() {
+        let config: Config =
+            toml::from_str("[metrics]\nmanual_restart_time_seconds = 900\n").unwrap();
+        assert_eq!(config.metrics.manual_restart_time_seconds, 900);
     }
 }

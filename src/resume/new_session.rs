@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -10,7 +10,10 @@ use tracing::{debug, info, warn};
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
 use crate::resume::backup::{BackupConfig, BackupHandler, SessionBackup};
-use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
+use crate::resume::{
+    ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, calculate_time_saved,
+    load_metrics_config,
+};
 use crate::state::{AuditLogger, CurrentSession, StateStore};
 use crate::telemetry::Metrics;
 
@@ -280,7 +283,10 @@ impl NewSessionStrategy {
         ctx: &ResumeContext,
         new_session_path: PathBuf,
         next_step: &NextStepInfo,
+        wait_duration: Duration,
+        metrics: Option<&Metrics>,
     ) -> Result<(), ResumeError> {
+        let metrics_config = load_metrics_config();
         let store = StateStore::new();
         let mut state = store.load();
 
@@ -288,9 +294,24 @@ impl NewSessionStrategy {
         state.stats.last_resume = Some(Utc::now());
         state.current_session = Some(self.build_current_session(ctx, new_session_path, next_step));
 
+        let calculation = calculate_time_saved(wait_duration, &metrics_config);
+        state.stats.time_saved_seconds += calculation.total_saved_seconds;
+
         store
             .save(&state)
             .map_err(|err| ResumeError::Config(format!("state store error: {err}")))?;
+
+        if let Some(metrics) = metrics {
+            metrics.record_time_saved(calculation.total_saved_seconds);
+        }
+
+        info!(
+            wait_seconds = calculation.wait_duration_seconds,
+            manual_restart_seconds = calculation.manual_restart_seconds,
+            total_saved = calculation.total_saved_seconds,
+            cumulative_saved = state.stats.time_saved_seconds,
+            "Time saved by resume"
+        );
 
         Ok(())
     }
@@ -401,7 +422,13 @@ impl ResumeStrategy for NewSessionStrategy {
             let _ = logger.log_session_created(&new_session_path);
         }
 
-        if let Err(err) = self.update_state_on_resume(ctx, new_session_path.clone(), &next_step) {
+        if let Err(err) = self.update_state_on_resume(
+            ctx,
+            new_session_path.clone(),
+            &next_step,
+            Duration::from_secs(0),
+            metrics.as_deref(),
+        ) {
             if let Some(logger) = &audit_logger {
                 let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
             }

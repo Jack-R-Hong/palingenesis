@@ -118,6 +118,7 @@ mod tests {
                 current_session: Some("/tmp/session.md".to_string()),
                 saves_count: 1,
                 total_resumes: 1,
+                time_saved_seconds: 0.0,
             }
         }
 

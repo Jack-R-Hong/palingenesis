@@ -67,6 +67,8 @@ pub struct Stats {
     pub total_resumes: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_resume: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub time_saved_seconds: f64,
 }
 
 #[cfg(test)]
@@ -83,11 +85,13 @@ mod tests {
 
     #[test]
     fn test_state_serialization_roundtrip() {
-        let state = StateFile::default();
+        let mut state = StateFile::default();
+        state.stats.time_saved_seconds = 360.5;
         let json = serde_json::to_string(&state).unwrap();
         let parsed: StateFile = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.version, state.version);
         assert_eq!(parsed.daemon_state, state.daemon_state);
         assert!(parsed.current_session.is_none());
+        assert_eq!(parsed.stats.time_saved_seconds, 360.5);
     }
 }

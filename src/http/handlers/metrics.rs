@@ -131,6 +131,8 @@ mod tests {
         assert!(text.contains("palingenesis_resume_duration_seconds"));
         assert!(text.contains("palingenesis_detection_latency_seconds"));
         assert!(text.contains("palingenesis_wait_duration_seconds"));
+        assert!(text.contains("palingenesis_time_saved_seconds_total"));
+        assert!(text.contains("palingenesis_time_saved_per_resume_seconds"));
     }
 
     #[tokio::test]

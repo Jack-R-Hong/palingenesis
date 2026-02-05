@@ -9,7 +9,10 @@ use tracing::{debug, info, warn};
 use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
 use crate::resume::backoff::{Backoff, BackoffConfig};
-use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
+use crate::resume::{
+    ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy, calculate_time_saved,
+    load_metrics_config,
+};
 use crate::state::{AuditLogger, CurrentSession, StateStore};
 use crate::telemetry::Metrics;
 
@@ -171,7 +174,13 @@ impl SameSessionStrategy {
         true
     }
 
-    fn update_state_on_resume(&self, ctx: &ResumeContext) -> Result<(), ResumeError> {
+    fn update_state_on_resume(
+        &self,
+        ctx: &ResumeContext,
+        wait_duration: Duration,
+        metrics: Option<&Metrics>,
+    ) -> Result<(), ResumeError> {
+        let metrics_config = load_metrics_config();
         let store = StateStore::new();
         let mut state = store.load();
 
@@ -179,9 +188,24 @@ impl SameSessionStrategy {
         state.stats.last_resume = Some(Utc::now());
         state.current_session = Some(self.build_current_session(ctx));
 
+        let calculation = calculate_time_saved(wait_duration, &metrics_config);
+        state.stats.time_saved_seconds += calculation.total_saved_seconds;
+
         store
             .save(&state)
             .map_err(|err| ResumeError::Config(format!("state store error: {err}")))?;
+
+        if let Some(metrics) = metrics {
+            metrics.record_time_saved(calculation.total_saved_seconds);
+        }
+
+        info!(
+            wait_seconds = calculation.wait_duration_seconds,
+            manual_restart_seconds = calculation.manual_restart_seconds,
+            total_saved = calculation.total_saved_seconds,
+            cumulative_saved = state.stats.time_saved_seconds,
+            "Time saved by resume"
+        );
 
         Ok(())
     }
@@ -261,7 +285,7 @@ impl ResumeStrategy for SameSessionStrategy {
 
         match self.trigger.trigger(ctx).await {
             Ok(()) => {
-                self.update_state_on_resume(ctx)?;
+                self.update_state_on_resume(ctx, wait_duration, metrics.as_deref())?;
                 if let Some(logger) = &audit_logger {
                     let _ = logger.log_resume_completed(
                         &ctx.session_path,

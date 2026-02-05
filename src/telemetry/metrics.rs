@@ -60,6 +60,8 @@ pub struct Metrics {
     resume_duration_seconds: Histogram,
     detection_latency_seconds: Histogram,
     wait_duration_seconds: Histogram,
+    time_saved_seconds_total: Counter<f64>,
+    time_saved_per_resume_seconds: Histogram,
 }
 
 impl Metrics {
@@ -205,6 +207,21 @@ impl Metrics {
             wait_duration_seconds.clone(),
         );
 
+        let time_saved_seconds_total = Counter::<f64>::default();
+        registry.register(
+            format!("{METRICS_NAMESPACE}_time_saved_seconds_total"),
+            "Total estimated time saved by automatic resumption",
+            time_saved_seconds_total.clone(),
+        );
+
+        let time_saved_per_resume_seconds =
+            Histogram::new([60.0, 120.0, 180.0, 300.0, 600.0, 900.0, 1800.0]);
+        registry.register(
+            format!("{METRICS_NAMESPACE}_time_saved_per_resume_seconds"),
+            "Time saved per individual resume operation",
+            time_saved_per_resume_seconds.clone(),
+        );
+
         let metrics = Self {
             registry: Arc::new(Mutex::new(registry)),
             info,
@@ -224,9 +241,12 @@ impl Metrics {
             resume_duration_seconds,
             detection_latency_seconds,
             wait_duration_seconds,
+            time_saved_seconds_total,
+            time_saved_per_resume_seconds,
         };
 
         metrics.set_static_info();
+        metrics.initialize_time_saved_total();
         metrics
     }
 
@@ -315,6 +335,15 @@ impl Metrics {
         self.wait_duration_seconds.observe(duration.as_secs_f64());
     }
 
+    pub fn record_time_saved(&self, total_saved_seconds: f64) {
+        if !total_saved_seconds.is_finite() || total_saved_seconds <= 0.0 {
+            return;
+        }
+        self.time_saved_seconds_total.inc_by(total_saved_seconds);
+        self.time_saved_per_resume_seconds
+            .observe(total_saved_seconds);
+    }
+
     pub fn set_retry_attempts(&self, attempt: u32) {
         self.retry_attempts.set(i64::from(attempt));
     }
@@ -360,6 +389,15 @@ impl Metrics {
         self.build_info
             .get_or_create(&BuildInfoLabels { version, commit })
             .set(1);
+    }
+
+    fn initialize_time_saved_total(&self) {
+        let store = StateStore::new();
+        let state = store.load();
+        let total_saved = state.stats.time_saved_seconds;
+        if total_saved.is_finite() && total_saved > 0.0 {
+            self.time_saved_seconds_total.inc_by(total_saved);
+        }
     }
 }
 
@@ -421,6 +459,7 @@ mod tests {
         metrics.record_detection(Duration::from_millis(50), "rate_limit");
         metrics.record_wait(Duration::from_secs(2));
         metrics.record_session_started();
+        metrics.record_time_saved(360.0);
         let output = metrics.encode().expect("encode metrics");
 
         assert!(output.contains("palingenesis_resumes_total"));
@@ -436,6 +475,8 @@ mod tests {
         assert!(output.contains("palingenesis_resume_duration_seconds"));
         assert!(output.contains("palingenesis_detection_latency_seconds"));
         assert!(output.contains("palingenesis_wait_duration_seconds"));
+        assert!(output.contains("palingenesis_time_saved_seconds_total"));
+        assert!(output.contains("palingenesis_time_saved_per_resume_seconds"));
     }
 
     #[test]

@@ -251,4 +251,17 @@ mod tests {
         let metadata = fs::metadata(&state_path).unwrap();
         assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
     }
+
+    #[test]
+    fn test_time_saved_persists_across_loads() {
+        let temp = tempfile::tempdir().unwrap();
+        let state_path = temp.path().join("state.json");
+        let store = StateStore::with_path(state_path.clone());
+        let mut state = StateFile::default();
+        state.stats.time_saved_seconds = 7200.0;
+        store.save(&state).unwrap();
+
+        let loaded = store.load();
+        assert_eq!(loaded.stats.time_saved_seconds, 7200.0);
+    }
 }

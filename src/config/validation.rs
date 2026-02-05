@@ -176,6 +176,14 @@ pub fn validate_config(config: &Config) -> ValidationResult {
         }
     }
 
+    if !(60..=1800).contains(&config.metrics.manual_restart_time_seconds) {
+        errors.push(ValidationError {
+            field: "metrics.manual_restart_time_seconds".to_string(),
+            message: "manual restart time must be between 60 and 1800 seconds".to_string(),
+            suggestion: Some("Set a value between 60 and 1800 seconds".to_string()),
+        });
+    }
+
     validate_bot_config(config, &mut errors, &mut warnings);
 
     ValidationResult { errors, warnings }
@@ -422,5 +430,16 @@ mod tests {
             .errors
             .iter()
             .any(|err| err.field == "bot.discord_public_key" && err.message.contains("64")));
+    }
+
+    #[test]
+    fn test_validate_config_reports_invalid_manual_restart_time() {
+        let mut config = Config::default();
+        config.metrics.manual_restart_time_seconds = 30;
+        let result = validate_config(&config);
+        assert!(result
+            .errors
+            .iter()
+            .any(|err| err.field == "metrics.manual_restart_time_seconds"));
     }
 }
