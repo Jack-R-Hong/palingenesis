@@ -332,6 +332,10 @@ pub struct OtelConfig {
     /// Enable metrics export.
     /// Example: metrics = true
     pub metrics: bool,
+    /// Enable Prometheus metrics endpoint exposure.
+    /// Example: metrics_enabled = true
+    #[serde(default = "default_metrics_enabled")]
+    pub metrics_enabled: bool,
 }
 
 impl Default for OtelConfig {
@@ -342,6 +346,23 @@ impl Default for OtelConfig {
             service_name: "palingenesis".to_string(),
             traces: true,
             metrics: true,
+            metrics_enabled: default_metrics_enabled(),
         }
+    }
+}
+
+fn default_metrics_enabled() -> bool {
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Config;
+
+    #[test]
+    fn test_metrics_enabled_parsing() {
+        let config: Config = toml::from_str("[otel]\nmetrics_enabled = false\n").unwrap();
+        let otel = config.otel.expect("otel config");
+        assert!(!otel.metrics_enabled);
     }
 }

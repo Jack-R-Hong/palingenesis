@@ -7,9 +7,9 @@ use std::process::{self, Command};
 use anyhow::Context;
 use serde::Serialize;
 
+use crate::config::Paths;
 use crate::config::schema::{Config, DiscordConfig, NtfyConfig, SlackConfig, WebhookConfig};
 use crate::config::validation::validate_config;
-use crate::config::Paths;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ValidationStatus {
@@ -37,10 +37,7 @@ pub async fn handle_init(force: bool, custom_path: Option<PathBuf>) -> anyhow::R
     fs::write(&config_path, config_content)?;
     set_file_permissions(&config_path);
 
-    println!(
-        "\x1b[32mConfig created at {}\x1b[0m",
-        config_path.display()
-    );
+    println!("\x1b[32mConfig created at {}\x1b[0m", config_path.display());
     println!("Edit with: palingenesis config edit");
 
     Ok(())
@@ -244,6 +241,7 @@ enabled = false
 # service_name = "palingenesis"
 # traces = true
 # metrics = true
+# metrics_enabled = true
 "#
     .to_string()
 }
@@ -329,11 +327,17 @@ fn line_col_from_offset(contents: &str, offset: usize) -> (usize, usize) {
 }
 
 fn find_editor() -> anyhow::Result<String> {
-    if let Some(editor) = env::var("EDITOR").ok().filter(|value| !value.trim().is_empty()) {
+    if let Some(editor) = env::var("EDITOR")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+    {
         return Ok(editor);
     }
 
-    if let Some(visual) = env::var("VISUAL").ok().filter(|value| !value.trim().is_empty()) {
+    if let Some(visual) = env::var("VISUAL")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+    {
         return Ok(visual);
     }
 
@@ -353,9 +357,7 @@ fn find_editor() -> anyhow::Result<String> {
         return Ok("notepad".to_string());
     }
 
-    anyhow::bail!(
-        "No editor found. Set the EDITOR environment variable (e.g., export EDITOR=vim)."
-    )
+    anyhow::bail!("No editor found. Set the EDITOR environment variable (e.g., export EDITOR=vim).")
 }
 
 #[cfg(unix)]
@@ -603,6 +605,18 @@ fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, Strin
         otel_override = true;
     }
 
+    if let Ok(value) = env::var("PALINGENESIS_OTEL_METRICS_ENABLED") {
+        let parsed = value
+            .parse::<bool>()
+            .context("PALINGENESIS_OTEL_METRICS_ENABLED must be true/false")?;
+        otel_config = Some(otel_config.unwrap_or_default());
+        if let Some(ref mut otel) = otel_config {
+            otel.metrics_enabled = parsed;
+        }
+        overrides.push(("PALINGENESIS_OTEL_METRICS_ENABLED".to_string(), value));
+        otel_override = true;
+    }
+
     if otel_override {
         config.otel = otel_config;
     }
@@ -680,11 +694,7 @@ fn apply_path_env_option(
     }
 }
 
-fn apply_list_env(
-    key: &str,
-    target: &mut Vec<String>,
-    overrides: &mut Vec<(String, String)>,
-) {
+fn apply_list_env(key: &str, target: &mut Vec<String>, overrides: &mut Vec<(String, String)>) {
     if let Ok(value) = env::var(key) {
         let list = value
             .split(',')

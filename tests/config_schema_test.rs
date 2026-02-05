@@ -126,6 +126,7 @@ metrics = true
             service_name: "palingenesis-test".to_string(),
             traces: false,
             metrics: true,
+            metrics_enabled: true,
         }
     );
 }
