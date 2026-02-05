@@ -55,10 +55,12 @@ impl Daemon {
             return Err(err.into());
         }
 
-        let _ = self.event_broadcaster.send(NotificationEvent::DaemonStarted {
+        if let Err(err) = self.event_broadcaster.send(NotificationEvent::DaemonStarted {
             timestamp: Utc::now(),
             version: env!("CARGO_PKG_VERSION").to_string(),
-        });
+        }) {
+            tracing::debug!(error = %err, "No SSE subscribers for daemon_started event (expected at startup)");
+        }
 
         let cancel = self.shutdown.cancel_token();
 
@@ -135,6 +137,18 @@ impl Daemon {
         cancel.cancelled().await;
         info!("Shutdown requested");
 
+        // Send DaemonStopped event BEFORE shutting down HTTP server
+        // so SSE clients can receive it
+        if let Err(err) = self.event_broadcaster.send(NotificationEvent::DaemonStopped {
+            timestamp: Utc::now(),
+            reason: "shutdown".to_string(),
+        }) {
+            tracing::debug!(error = %err, "No SSE subscribers to receive daemon_stopped event");
+        }
+
+        // Give SSE clients a brief moment to receive the event
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
         let shutdown = std::mem::take(&mut self.shutdown);
         match shutdown.shutdown().await {
             ShutdownResult::Graceful => info!("Shutdown completed"),
@@ -150,11 +164,6 @@ impl Daemon {
                 Err(_) => warn!("HTTP server shutdown timed out"),
             }
         }
-
-        let _ = self.event_broadcaster.send(NotificationEvent::DaemonStopped {
-            timestamp: Utc::now(),
-            reason: "shutdown".to_string(),
-        });
 
         self.pid_file.release()?;
         Ok(())
