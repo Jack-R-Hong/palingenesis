@@ -48,7 +48,7 @@ development_status:
   2-3-process-detection-opencode-start-stop: done
   2-4-stop-reason-classification-rate-limit: done
   2-5-stop-reason-classification-context-exhaustion: done
-  2-6-stop-reason-classification-user-exit: ready-for-dev
+  2-6-stop-reason-classification-user-exit: done
   2-7-monitor-event-channel: ready-for-dev
   epic-2-retrospective: optional
 
