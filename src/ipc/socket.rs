@@ -20,9 +20,6 @@ pub enum IpcError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Protocol error: {0}")]
-    Protocol(String),
-
     #[error("Socket already bound")]
     AlreadyBound,
 
@@ -151,7 +148,7 @@ impl IpcServer {
 impl Drop for IpcServer {
     fn drop(&mut self) {
         if let Err(e) = self.cleanup() {
-            eprintln!("Warning: Failed to clean up IPC socket: {}", e);
+            warn!(error = %e, "Failed to clean up IPC socket");
         }
     }
 }
@@ -396,5 +393,72 @@ mod tests {
         }
 
         assert!(!sock_path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_status_command() {
+        let temp = tempdir().unwrap();
+        let sock_path = temp.path().join("test.sock");
+        let mut server = IpcServer::with_path(sock_path.clone());
+        server.bind().await.unwrap();
+
+        let server = Arc::new(server);
+        let cancel = CancellationToken::new();
+        let state = Arc::new(MockState::default());
+        let server_ref = Arc::clone(&server);
+        let server_state = Arc::clone(&state);
+        let server_cancel = cancel.clone();
+        let server_task =
+            tokio::spawn(async move { server_ref.run(server_state, server_cancel).await });
+
+        let stream = tokio::net::UnixStream::connect(&sock_path).await.unwrap();
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        writer.write_all(b"STATUS\n").await.unwrap();
+        writer.flush().await.unwrap();
+
+        let mut response = String::new();
+        reader.read_line(&mut response).await.unwrap();
+        let status: crate::ipc::protocol::DaemonStatus =
+            serde_json::from_str(response.trim_end()).unwrap();
+        assert_eq!(status.state, "monitoring");
+        assert_eq!(status.uptime_secs, 3600);
+
+        cancel.cancel();
+        server_task.await.unwrap().unwrap();
+        server.cleanup().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_unknown_command_returns_error() {
+        let temp = tempdir().unwrap();
+        let sock_path = temp.path().join("test.sock");
+        let mut server = IpcServer::with_path(sock_path.clone());
+        server.bind().await.unwrap();
+
+        let server = Arc::new(server);
+        let cancel = CancellationToken::new();
+        let state = Arc::new(MockState::default());
+        let server_ref = Arc::clone(&server);
+        let server_state = Arc::clone(&state);
+        let server_cancel = cancel.clone();
+        let server_task =
+            tokio::spawn(async move { server_ref.run(server_state, server_cancel).await });
+
+        let stream = tokio::net::UnixStream::connect(&sock_path).await.unwrap();
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        writer.write_all(b"INVALID_COMMAND\n").await.unwrap();
+        writer.flush().await.unwrap();
+
+        let mut response = String::new();
+        reader.read_line(&mut response).await.unwrap();
+        assert!(response.starts_with("ERR: Unknown command:"));
+
+        cancel.cancel();
+        server_task.await.unwrap().unwrap();
+        server.cleanup().unwrap();
     }
 }

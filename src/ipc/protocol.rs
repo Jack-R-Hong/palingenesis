@@ -54,6 +54,9 @@ impl IpcResponse {
         match self {
             Self::Ok => "OK\n".to_string(),
             Self::Error { message } => format!("ERR: {}\n", message),
+            // DaemonStatus contains only primitive types (String, u64, Option<String>)
+            // which are guaranteed to serialize successfully. unwrap_or_default() is a
+            // defensive fallback that should never trigger in practice.
             Self::Status(status) => serde_json::to_string(status).unwrap_or_default() + "\n",
         }
     }
