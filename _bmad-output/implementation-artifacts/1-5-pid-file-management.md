@@ -1,6 +1,6 @@
 # Story 1.5: PID File Management
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -34,42 +34,42 @@ So that I can ensure only one daemon runs and CLI commands can find it.
 
 ## Tasks / Subtasks
 
-- [ ] Create PID file module structure (AC: 1, 2, 3, 4)
-  - [ ] Create `src/daemon/pid.rs` with PidFile struct
-  - [ ] Update `src/daemon/mod.rs` to export pid module
-- [ ] Implement PidFile struct and error types (AC: 1, 2, 3, 4)
-  - [ ] Define `PidError` enum with thiserror (AlreadyRunning, Io, Parse, ProcessCheck)
-  - [ ] Define `PidFile` struct holding the path
-  - [ ] Implement `PidFile::new()` - uses `Paths::runtime_dir().join("palingenesis.pid")`
-- [ ] Implement PID file creation (AC: 1)
-  - [ ] Implement `PidFile::acquire()` - creates PID file with current process ID
-  - [ ] Ensure runtime directory exists via `Paths::ensure_runtime_dir()`
-  - [ ] Write PID to file with exclusive access
-  - [ ] Set file permissions to 644 (owner read/write, others read)
-- [ ] Implement process existence check (AC: 2, 3)
-  - [ ] Implement `PidFile::is_process_running(pid)` for Linux via `/proc/{pid}`
-  - [ ] Implement `PidFile::is_process_running(pid)` for Unix via `kill(pid, 0)`
-  - [ ] Handle race conditions (process may exit between check and action)
-- [ ] Implement stale PID detection and cleanup (AC: 2, 3)
-  - [ ] Implement `PidFile::read()` - parse PID from existing file
-  - [ ] Implement `PidFile::check_stale()` - check if PID file is stale
-  - [ ] Implement `PidFile::remove()` - delete PID file
-  - [ ] Log warning when removing stale PID file
-- [ ] Implement PID file release on shutdown (AC: 4)
-  - [ ] Implement `PidFile::release()` - remove PID file on graceful shutdown
-  - [ ] Implement `Drop` trait for automatic cleanup on panic/unexpected exit
-- [ ] Integrate with Paths module (AC: 1)
-  - [ ] Use `Paths::runtime_dir()` for PID file location
-  - [ ] Use `Paths::ensure_runtime_dir()` before writing PID file
-- [ ] Add unit tests (AC: 1, 2, 3, 4)
-  - [ ] Test PID file creation and content
-  - [ ] Test stale PID detection with mock process check
-  - [ ] Test already running error when valid process exists
-  - [ ] Test cleanup on release
-  - [ ] Test file permissions
-- [ ] Add integration tests
-  - [ ] Test full acquire/release lifecycle
-  - [ ] Test concurrent acquisition attempts
+- [x] Create PID file module structure (AC: 1, 2, 3, 4)
+  - [x] Create `src/daemon/pid.rs` with PidFile struct
+  - [x] Update `src/daemon/mod.rs` to export pid module
+- [x] Implement PidFile struct and error types (AC: 1, 2, 3, 4)
+  - [x] Define `PidError` enum with thiserror (AlreadyRunning, Io, Parse, ProcessCheck)
+  - [x] Define `PidFile` struct holding the path
+  - [x] Implement `PidFile::new()` - uses `Paths::runtime_dir().join("palingenesis.pid")`
+- [x] Implement PID file creation (AC: 1)
+  - [x] Implement `PidFile::acquire()` - creates PID file with current process ID
+  - [x] Ensure runtime directory exists via `Paths::ensure_runtime_dir()`
+  - [x] Write PID to file with exclusive access
+  - [x] Set file permissions to 644 (owner read/write, others read)
+- [x] Implement process existence check (AC: 2, 3)
+  - [x] Implement `PidFile::is_process_running(pid)` for Linux via `/proc/{pid}`
+  - [x] Implement `PidFile::is_process_running(pid)` for Unix via `kill(pid, 0)`
+  - [x] Handle race conditions (process may exit between check and action)
+- [x] Implement stale PID detection and cleanup (AC: 2, 3)
+  - [x] Implement `PidFile::read()` - parse PID from existing file
+  - [x] Implement `PidFile::check_stale()` - check if PID file is stale
+  - [x] Implement `PidFile::remove()` - delete PID file
+  - [x] Log warning when removing stale PID file
+- [x] Implement PID file release on shutdown (AC: 4)
+  - [x] Implement `PidFile::release()` - remove PID file on graceful shutdown
+  - [x] Implement `Drop` trait for automatic cleanup on panic/unexpected exit
+- [x] Integrate with Paths module (AC: 1)
+  - [x] Use `Paths::runtime_dir()` for PID file location
+  - [x] Use `Paths::ensure_runtime_dir()` before writing PID file
+- [x] Add unit tests (AC: 1, 2, 3, 4)
+  - [x] Test PID file creation and content
+  - [x] Test stale PID detection with mock process check
+  - [x] Test already running error when valid process exists
+  - [x] Test cleanup on release
+  - [x] Test file permissions
+- [x] Add integration tests
+  - [x] Test full acquire/release lifecycle
+  - [x] Test concurrent acquisition attempts
 
 ## Dev Notes
 
@@ -382,17 +382,31 @@ From Story 1-4 (State Persistence Layer):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+openai/gpt-5.2-codex
 
 ### Debug Log References
 
+- `cargo build`
+- `cargo test`
+- `cargo clippy`
+
 ### Completion Notes List
+
+- Added PID file management module with acquire, stale detection, and cleanup behavior.
+- Implemented process existence checks for Linux and Unix with race protection and permissions.
+- Added unit and integration tests for PID lifecycle, stale handling, and concurrent acquisition.
 
 ### File List
 
 **Files to create:**
 - `src/daemon/pid.rs`
+- `tests/pid_file_test.rs`
 
 **Files to modify:**
 - `src/daemon/mod.rs` - Export pid module
+- `_bmad-output/implementation-artifacts/1-5-pid-file-management.md` - Update story status and tasks
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` - Update story status
+
+## Change Log
+
+- 2026-02-05: Added PID file management module with tests and lifecycle handling.
