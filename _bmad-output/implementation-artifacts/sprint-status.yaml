@@ -44,7 +44,7 @@ development_status:
   epic-1: in-progress
   1-1-project-initialization-from-starter-template: done
   1-2-cli-framework-with-clap-subcommands: done
-  1-3-platform-specific-path-resolution: ready-for-dev
+  1-3-platform-specific-path-resolution: review
   1-4-state-persistence-layer: backlog
   1-5-pid-file-management: backlog
   1-6-unix-socket-ipc-server: backlog

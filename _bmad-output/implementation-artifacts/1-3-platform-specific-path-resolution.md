@@ -1,6 +1,6 @@
 # Story 1.3: Platform-Specific Path Resolution
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,28 +37,28 @@ So that it integrates cleanly with my system conventions.
 
 ## Tasks / Subtasks
 
-- [ ] Create `src/config/paths.rs` with platform-specific path resolution (AC: 1, 2, 3, 4, 5)
-  - [ ] Define `Paths` struct with `config_dir()`, `config_file()`, `state_dir()`, `runtime_dir()` methods
-  - [ ] Implement Linux path resolution using XDG Base Directory Specification
-  - [ ] Implement macOS path resolution using Apple conventions
-  - [ ] Add `PALINGENESIS_CONFIG` environment variable override support
-  - [ ] Add `PALINGENESIS_STATE` environment variable override support (optional)
-- [ ] Add `dirs` crate dependency for reliable home directory detection
-  - [ ] Update Cargo.toml with `dirs = "6.0"` dependency
-- [ ] Implement runtime directory resolution (AC: N/A, prep for Story 1.5, 1.6)
-  - [ ] Linux: `/run/user/{uid}/palingenesis/`
-  - [ ] macOS: `/tmp/palingenesis-{uid}/`
-- [ ] Add directory creation helper functions
-  - [ ] `ensure_config_dir()` - creates config directory if not exists
-  - [ ] `ensure_state_dir()` - creates state directory if not exists
-  - [ ] `ensure_runtime_dir()` - creates runtime directory if not exists
-- [ ] Update `src/config/mod.rs` to re-export paths module
-- [ ] Add unit tests for path resolution (AC: 1, 2, 3, 4, 5)
-  - [ ] Test Linux paths (mock or cfg-gated)
-  - [ ] Test macOS paths (mock or cfg-gated)
-  - [ ] Test environment variable override
-  - [ ] Test directory creation functions
-- [ ] Add integration test for environment variable override
+- [x] Create `src/config/paths.rs` with platform-specific path resolution (AC: 1, 2, 3, 4, 5)
+  - [x] Define `Paths` struct with `config_dir()`, `config_file()`, `state_dir()`, `runtime_dir()` methods
+  - [x] Implement Linux path resolution using XDG Base Directory Specification
+  - [x] Implement macOS path resolution using Apple conventions
+  - [x] Add `PALINGENESIS_CONFIG` environment variable override support
+  - [x] Add `PALINGENESIS_STATE` environment variable override support (optional)
+- [x] Add `dirs` crate dependency for reliable home directory detection
+  - [x] Update Cargo.toml with `dirs = "6.0"` dependency
+- [x] Implement runtime directory resolution (AC: N/A, prep for Story 1.5, 1.6)
+  - [x] Linux: `/run/user/{uid}/palingenesis/`
+  - [x] macOS: `/tmp/palingenesis-{uid}/`
+- [x] Add directory creation helper functions
+  - [x] `ensure_config_dir()` - creates config directory if not exists
+  - [x] `ensure_state_dir()` - creates state directory if not exists
+  - [x] `ensure_runtime_dir()` - creates runtime directory if not exists
+- [x] Update `src/config/mod.rs` to re-export paths module
+- [x] Add unit tests for path resolution (AC: 1, 2, 3, 4, 5)
+  - [x] Test Linux paths (mock or cfg-gated)
+  - [x] Test macOS paths (mock or cfg-gated)
+  - [x] Test environment variable override
+  - [x] Test directory creation functions
+- [x] Add integration test for environment variable override
 
 ## Dev Notes
 
@@ -339,11 +339,20 @@ From Story 1-2:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+openai/gpt-5.2-codex
 
 ### Debug Log References
 
+- `cargo build`
+- `cargo test`
+- `lsp_diagnostics` (rust-analyzer unavailable in toolchain)
+
 ### Completion Notes List
+
+- Implemented `Paths` with Linux/macOS config/state/runtime resolution and env overrides.
+- Added directory creation helpers with secure runtime permissions.
+- Added unit + integration tests for platform paths, overrides, and helper creation.
+- Added `dirs` and `libc` dependencies for platform path and UID resolution.
 
 ### File List
 
@@ -352,5 +361,11 @@ From Story 1-2:
 - `tests/paths_test.rs`
 
 **Files to modify:**
-- `Cargo.toml` - Add dirs dependency
+- `Cargo.toml` - Add dirs/libc dependencies
 - `src/config/mod.rs` - Re-export paths module
+- `_bmad-output/implementation-artifacts/1-3-platform-specific-path-resolution.md` - Update story status, tasks, and notes
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` - Update story status
+
+## Change Log
+
+- 2026-02-05: Added platform-specific path resolution, environment overrides, runtime paths, helper creation, and tests.
