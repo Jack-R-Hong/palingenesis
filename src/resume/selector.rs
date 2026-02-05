@@ -1,10 +1,7 @@
-use async_trait::async_trait;
 use tracing::warn;
 
 use crate::monitor::classifier::StopReason;
-use crate::resume::context::ResumeContext;
-use crate::resume::error::ResumeError;
-use crate::resume::outcome::ResumeOutcome;
+use crate::resume::new_session::NewSessionStrategy;
 use crate::resume::same_session::SameSessionStrategy;
 use crate::resume::strategy::ResumeStrategy;
 
@@ -60,27 +57,5 @@ impl StrategySelector {
 impl Default for StrategySelector {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct NewSessionStrategy;
-
-impl NewSessionStrategy {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-#[async_trait]
-impl ResumeStrategy for NewSessionStrategy {
-    async fn execute(&self, _ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
-        Ok(ResumeOutcome::skipped(
-            "new-session strategy not implemented",
-        ))
-    }
-
-    fn name(&self) -> &'static str {
-        "NewSessionStrategy"
     }
 }
