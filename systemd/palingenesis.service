@@ -1,0 +1,23 @@
+[Unit]
+Description=Palingenesis - Agent Resurrection Daemon
+Documentation=https://github.com/Jack-R-Hong/palingenesis
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/palingenesis daemon start --foreground
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=%h/.local/state/palingenesis
+
+[Install]
+WantedBy=default.target

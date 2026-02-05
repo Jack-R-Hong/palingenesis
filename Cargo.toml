@@ -52,4 +52,6 @@ otel = ["opentelemetry"]
 systemd = ["dep:systemd"]
 
 [dev-dependencies]
-# Testing tools can be added here
+tempfile = "3.18"
+assert_cmd = "2.0"
+predicates = "3.1"

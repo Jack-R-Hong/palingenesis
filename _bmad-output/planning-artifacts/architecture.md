@@ -157,8 +157,8 @@ cargo generate --git https://github.com/skanehira/rust-cli-template.git --name p
 [package]
 name = "palingenesis"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.75"
+edition = "2024"
+rust-version = "1.85"
 description = "Agent resurrection system for continuous AI workflow execution"
 license = "MIT"
 
@@ -796,4 +796,3 @@ sequenceDiagram
 5. Growth features isolated
 
 ---
-

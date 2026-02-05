@@ -1,0 +1,35 @@
+# Palingenesis Default Configuration
+# Copy to ~/.config/palingenesis/config.toml (Linux)
+# or ~/Library/Application Support/palingenesis/config.toml (macOS)
+
+[daemon]
+# HTTP API port (localhost only by default)
+http_port = 7654
+# Polling interval in seconds
+poll_interval = 5
+
+[monitor]
+# Path to opencode session directory
+# session_dir = "~/.local/share/opencode/sessions"
+
+[resume]
+# Maximum retry attempts before giving up
+max_retries = 10
+# Base backoff delay in seconds
+backoff_base = 5
+# Maximum backoff delay in seconds
+backoff_max = 300
+
+[notifications]
+# Enable webhook notifications
+# webhook_url = "https://your-webhook.example.com/notify"
+
+# Enable ntfy.sh notifications
+# ntfy_topic = "palingenesis"
+# ntfy_server = "https://ntfy.sh"
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+# Log format: json, pretty
+format = "pretty"
