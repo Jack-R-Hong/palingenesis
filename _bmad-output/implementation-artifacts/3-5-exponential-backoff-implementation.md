@@ -1,6 +1,6 @@
 # Story 3.5: Exponential Backoff Implementation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -44,48 +44,48 @@ So that I don't overwhelm services and respect rate limits.
 
 ## Tasks / Subtasks
 
-- [ ] Create Backoff struct (AC: 1, 2, 3, 6)
-  - [ ] Create `src/resume/backoff.rs`
-  - [ ] Define BackoffConfig with all parameters
-  - [ ] Implement delay calculation formula
-  - [ ] Add builder pattern for configuration
+- [x] Create Backoff struct (AC: 1, 2, 3, 6)
+  - [x] Create `src/resume/backoff.rs`
+  - [x] Define BackoffConfig with all parameters
+  - [x] Implement delay calculation formula
+  - [x] Add builder pattern for configuration
 
-- [ ] Implement delay calculation (AC: 1, 2, 3)
-  - [ ] Implement base delay for attempt 1
-  - [ ] Implement exponential growth (2^n)
-  - [ ] Implement max_delay capping
-  - [ ] Handle attempt number edge cases
+- [x] Implement delay calculation (AC: 1, 2, 3)
+  - [x] Implement base delay for attempt 1
+  - [x] Implement exponential growth (2^n)
+  - [x] Implement max_delay capping
+  - [x] Handle attempt number edge cases
 
-- [ ] Implement jitter (AC: 4)
-  - [ ] Add random jitter +/- 10%
-  - [ ] Make jitter configurable (enable/disable, percentage)
-  - [ ] Use thread-safe random number generation
-  - [ ] Ensure reproducible tests with seed
+- [x] Implement jitter (AC: 4)
+  - [x] Add random jitter +/- 10%
+  - [x] Make jitter configurable (enable/disable, percentage)
+  - [x] Use thread-safe random number generation
+  - [x] Ensure reproducible tests with seed
 
-- [ ] Implement retry tracking (AC: 5)
-  - [ ] Track current attempt number
-  - [ ] Check against max_retries
-  - [ ] Return error when exceeded
-  - [ ] Provide reset functionality
+- [x] Implement retry tracking (AC: 5)
+  - [x] Track current attempt number
+  - [x] Check against max_retries
+  - [x] Return error when exceeded
+  - [x] Provide reset functionality
 
-- [ ] Add configuration validation (AC: 6)
-  - [ ] Validate base_delay > 0
-  - [ ] Validate max_delay >= base_delay
-  - [ ] Validate max_retries > 0
-  - [ ] Validate jitter_percent in valid range
+- [x] Add configuration validation (AC: 6)
+  - [x] Validate base_delay > 0
+  - [x] Validate max_delay >= base_delay
+  - [x] Validate max_retries > 0
+  - [x] Validate jitter_percent in valid range
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test initial delay calculation
-  - [ ] Test exponential growth
-  - [ ] Test max_delay capping
-  - [ ] Test jitter range
-  - [ ] Test max_retries enforcement
-  - [ ] Test configuration validation
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test initial delay calculation
+  - [x] Test exponential growth
+  - [x] Test max_delay capping
+  - [x] Test jitter range
+  - [x] Test max_retries enforcement
+  - [x] Test configuration validation
 
-- [ ] Add integration tests
-  - [ ] Test with SameSessionStrategy
-  - [ ] Test retry sequence
-  - [ ] Test reset functionality
+- [x] Add integration tests
+  - [x] Test with SameSessionStrategy
+  - [x] Test retry sequence
+  - [x] Test reset functionality
 
 ## Dev Notes
 
@@ -449,10 +449,14 @@ Client B: 33s, 57s, 132s...
 - `tests/backoff_test.rs`
 
 **Files to modify:**
-- `Cargo.toml` (add rand dependency if not present)
+- `Cargo.toml` (add rand dependency)
 - `src/resume/mod.rs` (add backoff module)
+- `src/resume/same_session.rs` (use Backoff for delay calculation)
+- `tests/same_session_strategy_test.rs` (disable jitter for deterministic wait)
+- `_bmad-output/implementation-artifacts/3-5-exponential-backoff-implementation.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented backoff module, jitter, and tests
