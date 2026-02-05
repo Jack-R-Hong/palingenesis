@@ -49,6 +49,17 @@ pub enum NotificationEvent {
 }
 
 impl NotificationEvent {
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            Self::SessionStopped { timestamp, .. } => *timestamp,
+            Self::ResumeAttempted { timestamp, .. } => *timestamp,
+            Self::ResumeSucceeded { timestamp, .. } => *timestamp,
+            Self::ResumeFailed { timestamp, .. } => *timestamp,
+            Self::DaemonStarted { timestamp, .. } => *timestamp,
+            Self::DaemonStopped { timestamp, .. } => *timestamp,
+        }
+    }
+
     pub fn event_type(&self) -> &'static str {
         match self {
             Self::SessionStopped { .. } => "session_stopped",

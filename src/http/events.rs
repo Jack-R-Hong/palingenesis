@@ -1,3 +1,6 @@
+use std::sync::{Arc, RwLock};
+
+use chrono::{DateTime, Utc};
 use tokio::sync::broadcast;
 
 use crate::notify::events::NotificationEvent;
@@ -8,6 +11,7 @@ const DEFAULT_CAPACITY: usize = 1024;
 #[derive(Clone, Debug)]
 pub struct EventBroadcaster {
     sender: broadcast::Sender<NotificationEvent>,
+    last_event: Arc<RwLock<Option<DateTime<Utc>>>>,
 }
 
 impl EventBroadcaster {
@@ -15,7 +19,10 @@ impl EventBroadcaster {
     pub fn new(capacity: usize) -> Self {
         let capacity = capacity.max(1);
         let (sender, _) = broadcast::channel(capacity);
-        Self { sender }
+        Self {
+            sender,
+            last_event: Arc::new(RwLock::new(None)),
+        }
     }
 
     /// Subscribe to notification events.
@@ -28,7 +35,14 @@ impl EventBroadcaster {
         &self,
         event: NotificationEvent,
     ) -> Result<usize, broadcast::error::SendError<NotificationEvent>> {
+        if let Ok(mut guard) = self.last_event.write() {
+            *guard = Some(event.timestamp());
+        }
         self.sender.send(event)
+    }
+
+    pub fn last_event_timestamp(&self) -> Option<DateTime<Utc>> {
+        self.last_event.read().ok().and_then(|guard| *guard)
     }
 }
 
@@ -84,5 +98,18 @@ mod tests {
         for _ in 0..3 {
             broadcaster.send(sample_event()).expect("send event");
         }
+    }
+
+    #[test]
+    fn test_last_event_timestamp_updates() {
+        let broadcaster = EventBroadcaster::default();
+        assert!(broadcaster.last_event_timestamp().is_none());
+
+        let _receiver = broadcaster.subscribe();
+
+        let event = sample_event();
+        let timestamp = event.timestamp();
+        broadcaster.send(event).expect("send event");
+        assert_eq!(broadcaster.last_event_timestamp(), Some(timestamp));
     }
 }
