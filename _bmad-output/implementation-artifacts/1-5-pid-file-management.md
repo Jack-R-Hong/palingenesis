@@ -1,6 +1,6 @@
 # Story 1.5: PID File Management
 
-Status: review
+Status: done
 
 ## Story
 
@@ -410,3 +410,4 @@ openai/gpt-5.2-codex
 ## Change Log
 
 - 2026-02-05: Added PID file management module with tests and lifecycle handling.
+- 2026-02-05: Code review complete - fixed DRY violation, improved API (path() returns &Path), added 3 tests.

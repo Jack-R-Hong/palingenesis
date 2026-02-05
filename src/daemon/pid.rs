@@ -1,6 +1,6 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use tracing::{info, warn};
@@ -37,27 +37,34 @@ impl PidFile {
         }
     }
 
+    /// Handle an existing PID file: return error if process is running, otherwise remove stale file.
+    /// Returns `Ok(())` if file was stale and removed, `Err(AlreadyRunning)` if process is alive.
+    fn handle_existing_pid_file(&self) -> Result<(), PidError> {
+        match self.read() {
+            Ok(existing_pid) => {
+                if Self::is_process_running(existing_pid)? {
+                    return Err(PidError::AlreadyRunning { pid: existing_pid });
+                }
+                warn!(
+                    pid = existing_pid,
+                    path = %self.path.display(),
+                    "Removing stale PID file"
+                );
+                self.remove()?;
+            }
+            Err(err) => {
+                warn!(error = %err, "Failed to read PID file, removing");
+                self.remove()?;
+            }
+        }
+        Ok(())
+    }
+
     /// Acquire the PID file lock.
     /// Returns error if another daemon is already running.
     pub fn acquire(&mut self) -> Result<(), PidError> {
         if self.path.exists() {
-            match self.read() {
-                Ok(existing_pid) => {
-                    if Self::is_process_running(existing_pid)? {
-                        return Err(PidError::AlreadyRunning { pid: existing_pid });
-                    }
-                    warn!(
-                        pid = existing_pid,
-                        path = %self.path.display(),
-                        "Removing stale PID file"
-                    );
-                    self.remove()?;
-                }
-                Err(err) => {
-                    warn!(error = %err, "Failed to read PID file, removing");
-                    self.remove()?;
-                }
-            }
+            self.handle_existing_pid_file()?;
         }
 
         Paths::ensure_runtime_dir()
@@ -71,23 +78,8 @@ impl PidFile {
         {
             Ok(file) => file,
             Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {
-                match self.read() {
-                    Ok(existing_pid) => {
-                        if Self::is_process_running(existing_pid)? {
-                            return Err(PidError::AlreadyRunning { pid: existing_pid });
-                        }
-                        warn!(
-                            pid = existing_pid,
-                            path = %self.path.display(),
-                            "Removing stale PID file"
-                        );
-                        self.remove()?;
-                    }
-                    Err(err) => {
-                        warn!(error = %err, "Failed to read PID file, removing");
-                        self.remove()?;
-                    }
-                }
+                // Race condition: another process created the file between our check and open
+                self.handle_existing_pid_file()?;
                 OpenOptions::new()
                     .write(true)
                     .create_new(true)
@@ -175,7 +167,7 @@ impl PidFile {
     }
 
     /// Returns the PID file path.
-    pub fn path(&self) -> &PathBuf {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 }
@@ -307,6 +299,58 @@ mod tests {
         assert_eq!(mode, 0o644);
 
         pid_file.release().unwrap();
+        remove_env_var("PALINGENESIS_RUNTIME");
+    }
+
+    #[test]
+    fn test_check_stale_returns_true_for_nonexistent_process() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        set_env_var("PALINGENESIS_RUNTIME", temp.path());
+
+        let pid_path = temp.path().join("palingenesis.pid");
+        fs::create_dir_all(temp.path()).unwrap();
+        fs::write(&pid_path, "4294967295").unwrap();
+
+        let pid_file = PidFile::new();
+        assert!(pid_file.check_stale().unwrap());
+
+        remove_env_var("PALINGENESIS_RUNTIME");
+    }
+
+    #[test]
+    fn test_check_stale_returns_false_for_running_process() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        set_env_var("PALINGENESIS_RUNTIME", temp.path());
+
+        let pid_path = temp.path().join("palingenesis.pid");
+        fs::create_dir_all(temp.path()).unwrap();
+        fs::write(&pid_path, process::id().to_string()).unwrap();
+
+        let pid_file = PidFile::new();
+        assert!(!pid_file.check_stale().unwrap());
+
+        remove_env_var("PALINGENESIS_RUNTIME");
+    }
+
+    #[test]
+    fn test_read_returns_error_for_invalid_content() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        set_env_var("PALINGENESIS_RUNTIME", temp.path());
+
+        let pid_path = temp.path().join("palingenesis.pid");
+        fs::create_dir_all(temp.path()).unwrap();
+        fs::write(&pid_path, "not_a_number").unwrap();
+
+        let pid_file = PidFile::new();
+        let err = pid_file.read().unwrap_err();
+        match err {
+            PidError::Parse(content) => assert_eq!(content, "not_a_number"),
+            other => panic!("unexpected error: {other:?}"),
+        }
+
         remove_env_var("PALINGENESIS_RUNTIME");
     }
 }
