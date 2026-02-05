@@ -67,7 +67,7 @@ development_status:
 
   # Epic 4: Configuration Management
   epic-4: in-progress
-  4-1-config-schema-definition: ready-for-dev
+  4-1-config-schema-definition: done
   4-2-config-init-command: ready-for-dev
   4-3-config-show-command: ready-for-dev
   4-4-config-validate-command: ready-for-dev

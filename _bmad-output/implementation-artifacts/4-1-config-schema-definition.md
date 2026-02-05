@@ -1,6 +1,6 @@
 # Story 4.1: Config Schema Definition
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -43,82 +43,82 @@ So that configuration is type-safe and documented.
 
 ## Tasks / Subtasks
 
-- [ ] Create config module structure (AC: 1)
-  - [ ] Create `src/config/mod.rs` with module exports
-  - [ ] Create `src/config/schema.rs` for config structs
+- [x] Create config module structure (AC: 1)
+  - [x] Create `src/config/mod.rs` with module exports
+  - [x] Create `src/config/schema.rs` for config structs
 
-- [ ] Define root Config struct (AC: 1, 3)
-  - [ ] Add `daemon: DaemonConfig` section
-  - [ ] Add `monitoring: MonitoringConfig` section
-  - [ ] Add `resume: ResumeConfig` section
-  - [ ] Add `notifications: NotificationsConfig` section
-  - [ ] Add `otel: Option<OtelConfig>` section (optional)
+- [x] Define root Config struct (AC: 1, 3)
+  - [x] Add `daemon: DaemonConfig` section
+  - [x] Add `monitoring: MonitoringConfig` section
+  - [x] Add `resume: ResumeConfig` section
+  - [x] Add `notifications: NotificationsConfig` section
+  - [x] Add `otel: Option<OtelConfig>` section (optional)
 
-- [ ] Define DaemonConfig struct (AC: 1, 2, 4)
-  - [ ] Add `pid_file: Option<PathBuf>` with platform default
-  - [ ] Add `socket_path: Option<PathBuf>` with platform default
-  - [ ] Add `http_enabled: bool` default false
-  - [ ] Add `http_port: u16` default 7654
-  - [ ] Add `http_bind: String` default "127.0.0.1"
-  - [ ] Add `log_level: String` default "info"
-  - [ ] Add `log_file: Option<PathBuf>`
+- [x] Define DaemonConfig struct (AC: 1, 2, 4)
+  - [x] Add `pid_file: Option<PathBuf>` with platform default
+  - [x] Add `socket_path: Option<PathBuf>` with platform default
+  - [x] Add `http_enabled: bool` default false
+  - [x] Add `http_port: u16` default 7654
+  - [x] Add `http_bind: String` default "127.0.0.1"
+  - [x] Add `log_level: String` default "info"
+  - [x] Add `log_file: Option<PathBuf>`
 
-- [ ] Define MonitoringConfig struct (AC: 1, 2, 4)
-  - [ ] Add `session_dir: PathBuf` with platform default
-  - [ ] Add `assistants: Vec<String>` for explicit list
-  - [ ] Add `auto_detect: bool` default true
-  - [ ] Add `debounce_ms: u64` default 100
-  - [ ] Add `poll_interval_secs: Option<u64>` for polling fallback
+- [x] Define MonitoringConfig struct (AC: 1, 2, 4)
+  - [x] Add `session_dir: PathBuf` with platform default
+  - [x] Add `assistants: Vec<String>` for explicit list
+  - [x] Add `auto_detect: bool` default true
+  - [x] Add `debounce_ms: u64` default 100
+  - [x] Add `poll_interval_secs: Option<u64>` for polling fallback
 
-- [ ] Define ResumeConfig struct (AC: 1, 2, 4)
-  - [ ] Add `enabled: bool` default true
-  - [ ] Add `base_delay_secs: u64` default 30
-  - [ ] Add `max_delay_secs: u64` default 300
-  - [ ] Add `max_retries: u32` default 10
-  - [ ] Add `jitter: bool` default true
-  - [ ] Add `backup_count: u32` default 10
+- [x] Define ResumeConfig struct (AC: 1, 2, 4)
+  - [x] Add `enabled: bool` default true
+  - [x] Add `base_delay_secs: u64` default 30
+  - [x] Add `max_delay_secs: u64` default 300
+  - [x] Add `max_retries: u32` default 10
+  - [x] Add `jitter: bool` default true
+  - [x] Add `backup_count: u32` default 10
 
-- [ ] Define NotificationsConfig struct (AC: 1, 2, 4, 5)
-  - [ ] Add `enabled: bool` default false
-  - [ ] Add `webhook: Option<WebhookConfig>`
-  - [ ] Add `ntfy: Option<NtfyConfig>`
-  - [ ] Add `discord: Option<DiscordConfig>`
-  - [ ] Add `slack: Option<SlackConfig>`
+- [x] Define NotificationsConfig struct (AC: 1, 2, 4, 5)
+  - [x] Add `enabled: bool` default false
+  - [x] Add `webhook: Option<WebhookConfig>`
+  - [x] Add `ntfy: Option<NtfyConfig>`
+  - [x] Add `discord: Option<DiscordConfig>`
+  - [x] Add `slack: Option<SlackConfig>`
 
-- [ ] Define notification channel sub-structs (AC: 5)
-  - [ ] Define `WebhookConfig { url: String, headers: Option<HashMap<String, String>> }`
-  - [ ] Define `NtfyConfig { topic: String, server: Option<String>, priority: Option<String> }`
-  - [ ] Define `DiscordConfig { webhook_url: String }`
-  - [ ] Define `SlackConfig { webhook_url: String }`
+- [x] Define notification channel sub-structs (AC: 5)
+  - [x] Define `WebhookConfig { url: String, headers: Option<HashMap<String, String>> }`
+  - [x] Define `NtfyConfig { topic: String, server: Option<String>, priority: Option<String> }`
+  - [x] Define `DiscordConfig { webhook_url: String }`
+  - [x] Define `SlackConfig { webhook_url: String }`
 
-- [ ] Define OtelConfig struct (AC: 1, 6)
-  - [ ] Add `enabled: bool` default false
-  - [ ] Add `endpoint: Option<String>`
-  - [ ] Add `service_name: String` default "palingenesis"
-  - [ ] Add `traces: bool` default true
-  - [ ] Add `metrics: bool` default true
+- [x] Define OtelConfig struct (AC: 1, 6)
+  - [x] Add `enabled: bool` default false
+  - [x] Add `endpoint: Option<String>`
+  - [x] Add `service_name: String` default "palingenesis"
+  - [x] Add `traces: bool` default true
+  - [x] Add `metrics: bool` default true
 
-- [ ] Implement Default trait (AC: 4)
-  - [ ] Implement `Default` for all config structs
-  - [ ] Use platform-specific paths in defaults
-  - [ ] Ensure default config is immediately usable
+- [x] Implement Default trait (AC: 4)
+  - [x] Implement `Default` for all config structs
+  - [x] Use platform-specific paths in defaults
+  - [x] Ensure default config is immediately usable
 
-- [ ] Add serde attributes (AC: 1, 6)
-  - [ ] Add `#[serde(default)]` to all structs
-  - [ ] Add `#[serde(skip_serializing_if = "Option::is_none")]` to optional fields
-  - [ ] Add `#[serde(rename = "...")]` where TOML naming differs
+- [x] Add serde attributes (AC: 1, 6)
+  - [x] Add `#[serde(default)]` to all structs
+  - [x] Add `#[serde(skip_serializing_if = "Option::is_none")]` to optional fields
+  - [x] Add `#[serde(rename = "...")]` where TOML naming differs
 
-- [ ] Add documentation comments (AC: 2)
-  - [ ] Add doc comments to all structs
-  - [ ] Add doc comments to all fields
-  - [ ] Include examples in doc comments
+- [x] Add documentation comments (AC: 2)
+  - [x] Add doc comments to all structs
+  - [x] Add doc comments to all fields
+  - [x] Include examples in doc comments
 
-- [ ] Add unit tests (AC: 1, 3, 4, 5, 6)
-  - [ ] Test deserialize full config
-  - [ ] Test deserialize minimal config
-  - [ ] Test default values applied
-  - [ ] Test nested struct deserialization
-  - [ ] Test invalid config errors
+- [x] Add unit tests (AC: 1, 3, 4, 5, 6)
+  - [x] Test deserialize full config
+  - [x] Test deserialize minimal config
+  - [x] Test default values applied
+  - [x] Test nested struct deserialization
+  - [x] Test invalid config errors
 
 ## Dev Notes
 
@@ -391,8 +391,9 @@ Uses existing dependencies:
 
 **Files to modify:**
 - `src/config/mod.rs`
-- `_bmad-output/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented config schema defaults, serde docs, and unit tests
