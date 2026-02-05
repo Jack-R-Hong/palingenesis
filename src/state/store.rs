@@ -98,7 +98,6 @@ impl StateStore {
 
     /// Save state to file with atomic write.
     pub fn save(&self, state: &StateFile) -> Result<(), StateError> {
-        Paths::ensure_state_dir()?;
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -127,12 +126,14 @@ impl StateStore {
     }
 
     fn open_lock_file(&self) -> Result<File, StateError> {
-        Ok(OpenOptions::new()
+        let file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .truncate(true)
-            .open(&self.lock_path)?)
+            .truncate(false)
+            .open(&self.lock_path)?;
+        self.apply_owner_permissions(&self.lock_path)?;
+        Ok(file)
     }
 
     fn lock_shared_with_timeout(&self, file: &File) -> Result<(), StateError> {

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 pub const STATE_VERSION: u32 = 1;
 
 /// Root state file structure.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StateFile {
     pub version: u32,
     pub daemon_state: DaemonState,
@@ -41,7 +41,7 @@ impl Default for DaemonState {
 }
 
 /// Current session information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CurrentSession {
     pub path: PathBuf,
     pub steps_completed: Vec<u32>,
@@ -61,7 +61,7 @@ impl Default for CurrentSession {
 }
 
 /// Daemon statistics.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Stats {
     pub saves_count: u64,
     pub total_resumes: u64,
