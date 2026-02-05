@@ -100,7 +100,7 @@ development_status:
   epic-7: in-progress
   7-1-prometheus-metrics-endpoint: done
   7-2-core-metrics-implementation: done
-  7-3-time-saved-metric: backlog
+  7-3-time-saved-metric: ready-for-dev
   7-4-saves-count-metric: backlog
   7-5-otel-traces-export: backlog
   7-6-otel-logs-export: backlog
