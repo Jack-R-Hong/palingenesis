@@ -86,6 +86,7 @@ metrics = true
             session_dir: PathBuf::from("/tmp/opencode"),
             assistants: vec!["sisyphus".to_string(), "opencode".to_string()],
             auto_detect: false,
+            auto_detect_interval_secs: 300,
             debounce_ms: 250,
             poll_interval_secs: Some(5),
         }
@@ -148,6 +149,7 @@ fn test_default_values_applied() {
     assert_eq!(config.monitoring.session_dir, expected_session_dir());
     assert!(config.monitoring.assistants.is_empty());
     assert_eq!(config.monitoring.auto_detect, true);
+    assert_eq!(config.monitoring.auto_detect_interval_secs, 300);
     assert_eq!(config.monitoring.debounce_ms, 100);
     assert_eq!(config.monitoring.poll_interval_secs, None);
 

@@ -112,6 +112,9 @@ pub struct MonitoringConfig {
     /// Auto-detect running assistants.
     /// Example: auto_detect = true
     pub auto_detect: bool,
+    /// Interval for auto-detection re-scan (seconds).
+    /// Example: auto_detect_interval_secs = 300
+    pub auto_detect_interval_secs: u64,
     /// Debounce time for file events (milliseconds).
     /// Example: debounce_ms = 100
     pub debounce_ms: u64,
@@ -130,6 +133,7 @@ impl Default for MonitoringConfig {
             session_dir,
             assistants: Vec::new(),
             auto_detect: true,
+            auto_detect_interval_secs: 300,
             debounce_ms: 100,
             poll_interval_secs: None,
         }
