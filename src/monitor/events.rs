@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use tokio::sync::mpsc;
 
+use crate::monitor::session::Session;
+
 /// Events emitted by the file system watcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WatchEvent {
@@ -14,6 +16,26 @@ pub enum WatchEvent {
     /// Session directory was created.
     DirectoryCreated(PathBuf),
     /// Watcher encountered an error.
+    Error(String),
+}
+
+/// Events emitted by the monitor after parsing session state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MonitorEvent {
+    /// File was created in the session directory.
+    FileCreated(PathBuf),
+    /// File was modified in the session directory.
+    FileModified(PathBuf),
+    /// File was deleted from the session directory.
+    FileDeleted(PathBuf),
+    /// Session directory was created.
+    DirectoryCreated(PathBuf),
+    /// Session state changed (parsed from frontmatter).
+    SessionChanged {
+        session: Session,
+        previous: Option<Session>,
+    },
+    /// Watcher or parser encountered an error.
     Error(String),
 }
 
@@ -31,3 +53,15 @@ pub enum WatchError {
 
 pub type WatchEventSender = mpsc::Sender<WatchEvent>;
 pub type WatchEventReceiver = mpsc::Receiver<WatchEvent>;
+
+impl From<WatchEvent> for MonitorEvent {
+    fn from(event: WatchEvent) -> Self {
+        match event {
+            WatchEvent::FileCreated(path) => MonitorEvent::FileCreated(path),
+            WatchEvent::FileModified(path) => MonitorEvent::FileModified(path),
+            WatchEvent::FileDeleted(path) => MonitorEvent::FileDeleted(path),
+            WatchEvent::DirectoryCreated(path) => MonitorEvent::DirectoryCreated(path),
+            WatchEvent::Error(message) => MonitorEvent::Error(message),
+        }
+    }
+}
