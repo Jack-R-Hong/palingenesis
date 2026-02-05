@@ -97,8 +97,8 @@ development_status:
   epic-6-retrospective: done
 
   # Epic 7: Observability & Metrics
-  epic-7: backlog
-  7-1-prometheus-metrics-endpoint: backlog
+  epic-7: in-progress
+  7-1-prometheus-metrics-endpoint: ready-for-dev
   7-2-core-metrics-implementation: backlog
   7-3-time-saved-metric: backlog
   7-4-saves-count-metric: backlog
