@@ -33,8 +33,10 @@ async fn main() -> anyhow::Result<()> {
                 section,
                 effective,
             } => commands::config::handle_show(json, section, effective).await,
-            ConfigAction::Validate => commands::config::handle_validate().await,
-            ConfigAction::Edit => commands::config::handle_edit().await,
+            ConfigAction::Validate { path } => commands::config::handle_validate(path).await,
+            ConfigAction::Edit { path, no_validate } => {
+                commands::config::handle_edit(path, no_validate).await
+            }
         },
         Some(Commands::Pause) => commands::session::handle_pause().await,
         Some(Commands::Resume) => commands::session::handle_resume().await,

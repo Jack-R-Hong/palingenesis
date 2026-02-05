@@ -2,12 +2,21 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::{self, Command};
 
 use anyhow::Context;
 use serde::Serialize;
 
 use crate::config::schema::{Config, DiscordConfig, NtfyConfig, SlackConfig, WebhookConfig};
+use crate::config::validation::validate_config;
 use crate::config::Paths;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ValidationStatus {
+    Valid,
+    Missing,
+    Invalid,
+}
 
 pub async fn handle_init(force: bool, custom_path: Option<PathBuf>) -> anyhow::Result<()> {
     let config_path = custom_path.unwrap_or_else(Paths::config_file);
@@ -77,13 +86,46 @@ pub async fn handle_show(
     Ok(())
 }
 
-pub async fn handle_validate() -> anyhow::Result<()> {
-    println!("config validate not implemented (Story 4.4)");
-    Ok(())
+pub async fn handle_validate(custom_path: Option<PathBuf>) -> anyhow::Result<()> {
+    let config_path = custom_path.unwrap_or_else(Paths::config_file);
+    match validate_config_at_path(&config_path)? {
+        ValidationStatus::Valid | ValidationStatus::Missing => Ok(()),
+        ValidationStatus::Invalid => {
+            process::exit(1);
+        }
+    }
 }
 
-pub async fn handle_edit() -> anyhow::Result<()> {
-    println!("config edit not implemented (Story 4.5)");
+pub async fn handle_edit(custom_path: Option<PathBuf>, no_validate: bool) -> anyhow::Result<()> {
+    let config_path = custom_path.unwrap_or_else(Paths::config_file);
+
+    if !config_path.exists() {
+        println!("No config file found. Creating default config...");
+        handle_init(false, Some(config_path.clone())).await?;
+    }
+
+    let editor = find_editor()?;
+    println!("Opening {} with {}...", config_path.display(), editor);
+
+    let status = Command::new(&editor)
+        .arg(&config_path)
+        .status()
+        .with_context(|| format!("Failed to launch editor: {editor}"))?;
+
+    if !status.success() {
+        anyhow::bail!("Editor exited with non-zero status");
+    }
+
+    if no_validate {
+        println!("Validation skipped (--no-validate)");
+        return Ok(());
+    }
+
+    println!("Validating configuration...");
+    if let ValidationStatus::Invalid = validate_config_at_path(&config_path)? {
+        eprintln!("Validation failed. You may want to re-run the editor.");
+    }
+
     Ok(())
 }
 
@@ -145,6 +187,8 @@ http_bind = "127.0.0.1"
 [monitoring]
 # Auto-detect running AI assistants
 auto_detect = true
+# Auto-detect re-scan interval (seconds)
+auto_detect_interval_secs = 300
 # Explicit list of assistants to monitor (optional)
 # assistants = ["opencode"]
 # Debounce time for file events (milliseconds)
@@ -210,6 +254,117 @@ fn load_config_from_path(path: &Path) -> anyhow::Result<Config> {
     let config = toml::from_str(&contents)
         .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
     Ok(config)
+}
+
+fn validate_config_at_path(path: &Path) -> anyhow::Result<ValidationStatus> {
+    if !path.exists() {
+        println!("No config file found, will use defaults");
+        return Ok(ValidationStatus::Missing);
+    }
+
+    let contents = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+
+    if let Err(err) = toml::from_str::<toml::Value>(&contents) {
+        eprintln!("\x1b[31mConfiguration syntax error:\x1b[0m");
+        eprintln!("  {err}");
+        if let Some((line, column)) = toml_error_location(&contents, &err) {
+            eprintln!("  at line {line}, column {column}");
+            eprintln!("  Suggestion: check syntax near line {line}");
+        }
+        return Ok(ValidationStatus::Invalid);
+    }
+
+    let config: Config = match toml::from_str(&contents) {
+        Ok(config) => config,
+        Err(err) => {
+            eprintln!("\x1b[31mConfiguration value error:\x1b[0m");
+            eprintln!("  {err}");
+            eprintln!("  Suggestion: ensure values match the expected types");
+            return Ok(ValidationStatus::Invalid);
+        }
+    };
+
+    let result = validate_config(&config);
+
+    for warning in &result.warnings {
+        eprintln!("Warning: {}: {}", warning.field, warning.message);
+    }
+
+    if !result.is_valid() {
+        eprintln!("\x1b[31mConfiguration errors:\x1b[0m");
+        for error in &result.errors {
+            eprintln!("  {}: {}", error.field, error.message);
+            if let Some(ref suggestion) = error.suggestion {
+                eprintln!("    Suggestion: {suggestion}");
+            }
+        }
+        return Ok(ValidationStatus::Invalid);
+    }
+
+    println!("\x1b[32mConfiguration valid\x1b[0m");
+    Ok(ValidationStatus::Valid)
+}
+
+fn toml_error_location(contents: &str, err: &toml::de::Error) -> Option<(usize, usize)> {
+    let span = err.span()?;
+    Some(line_col_from_offset(contents, span.start))
+}
+
+fn line_col_from_offset(contents: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+    for (idx, ch) in contents.char_indices() {
+        if idx >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    (line, column)
+}
+
+fn find_editor() -> anyhow::Result<String> {
+    if let Some(editor) = env::var("EDITOR").ok().filter(|value| !value.trim().is_empty()) {
+        return Ok(editor);
+    }
+
+    if let Some(visual) = env::var("VISUAL").ok().filter(|value| !value.trim().is_empty()) {
+        return Ok(visual);
+    }
+
+    #[cfg(unix)]
+    {
+        if command_exists("vi") {
+            return Ok("vi".to_string());
+        }
+
+        if command_exists("nano") {
+            return Ok("nano".to_string());
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        return Ok("notepad".to_string());
+    }
+
+    anyhow::bail!(
+        "No editor found. Set the EDITOR environment variable (e.g., export EDITOR=vim)."
+    )
+}
+
+#[cfg(unix)]
+fn command_exists(command: &str) -> bool {
+    Command::new("which")
+        .arg(command)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
 }
 
 fn format_config(config: &Config, json: bool) -> anyhow::Result<String> {

@@ -93,9 +93,20 @@ pub enum ConfigAction {
         effective: bool,
     },
     /// Validate configuration
-    Validate,
+    Validate {
+        /// Custom path for config file
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
     /// Edit configuration
-    Edit,
+    Edit {
+        /// Custom path for config file
+        #[arg(long)]
+        path: Option<PathBuf>,
+        /// Skip validation after editing
+        #[arg(long)]
+        no_validate: bool,
+    },
 }
 
 #[cfg(test)]
@@ -396,9 +407,31 @@ mod tests {
         let cli = Cli::try_parse_from(["palingenesis", "config", "validate"]).unwrap();
         match cli.command {
             Some(Commands::Config {
-                action: ConfigAction::Validate,
-            }) => {}
+                action: ConfigAction::Validate { path },
+            }) => {
+                assert!(path.is_none());
+            }
             _ => panic!("Expected Config Validate command"),
+        }
+    }
+
+    #[test]
+    fn test_config_validate_command_with_path() {
+        let cli = Cli::try_parse_from([
+            "palingenesis",
+            "config",
+            "validate",
+            "--path",
+            "/tmp/palingenesis.toml",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Config {
+                action: ConfigAction::Validate { path },
+            }) => {
+                assert_eq!(path.as_deref(), Some(Path::new("/tmp/palingenesis.toml")));
+            }
+            _ => panic!("Expected Config Validate command with path"),
         }
     }
 
@@ -407,9 +440,34 @@ mod tests {
         let cli = Cli::try_parse_from(["palingenesis", "config", "edit"]).unwrap();
         match cli.command {
             Some(Commands::Config {
-                action: ConfigAction::Edit,
-            }) => {}
+                action: ConfigAction::Edit { path, no_validate },
+            }) => {
+                assert!(path.is_none());
+                assert!(!no_validate);
+            }
             _ => panic!("Expected Config Edit command"),
+        }
+    }
+
+    #[test]
+    fn test_config_edit_command_with_flags() {
+        let cli = Cli::try_parse_from([
+            "palingenesis",
+            "config",
+            "edit",
+            "--path",
+            "/tmp/palingenesis.toml",
+            "--no-validate",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Config {
+                action: ConfigAction::Edit { path, no_validate },
+            }) => {
+                assert_eq!(path.as_deref(), Some(Path::new("/tmp/palingenesis.toml")));
+                assert!(no_validate);
+            }
+            _ => panic!("Expected Config Edit command with flags"),
         }
     }
 
