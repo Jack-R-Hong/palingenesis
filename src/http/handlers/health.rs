@@ -24,7 +24,8 @@ pub struct HealthResponse {
 }
 
 impl HealthResponse {
-    fn new(status: HealthStatus, uptime: String, issues: Vec<String>) -> Self {
+    /// Creates a new health response with the given status, uptime, and issues.
+    pub(crate) fn new(status: HealthStatus, uptime: String, issues: Vec<String>) -> Self {
         Self {
             status,
             uptime,
@@ -48,6 +49,11 @@ pub async fn health_handler(
     (StatusCode::OK, Json(response))
 }
 
+/// Collects health issues from daemon state to determine degraded status.
+///
+/// Returns a list of issue identifiers for any detected problems:
+/// - `paused`: Daemon is currently paused
+/// - `config_unavailable`: Configuration lock is poisoned or inaccessible
 fn collect_health_issues(state: &DaemonState) -> Vec<String> {
     let mut issues = Vec::new();
     if state.is_paused() {
@@ -59,13 +65,23 @@ fn collect_health_issues(state: &DaemonState) -> Vec<String> {
     issues
 }
 
+/// Formats a duration as a human-readable uptime string.
+///
+/// Output format examples:
+/// - `"45s"` for durations under 1 minute
+/// - `"15m"` for durations under 1 hour
+/// - `"2h30m"` for durations under 1 day
+/// - `"3d2h"` for durations of 1 day or more
 fn format_uptime(duration: Duration) -> String {
     let total_secs = duration.as_secs();
-    let hours = total_secs / 3600;
+    let days = total_secs / 86400;
+    let hours = (total_secs % 86400) / 3600;
     let minutes = (total_secs % 3600) / 60;
     let seconds = total_secs % 60;
 
-    if hours > 0 {
+    if days > 0 {
+        format!("{days}d{hours}h")
+    } else if hours > 0 {
         format!("{hours}h{minutes}m")
     } else if minutes > 0 {
         format!("{minutes}m")
@@ -108,7 +124,10 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(payload["status"], "ok");
-        assert!(payload["uptime"].as_str().unwrap_or_default().len() > 0);
+        assert!(
+            payload["uptime"].as_str().is_some_and(|s| !s.is_empty()),
+            "uptime should be a non-empty string"
+        );
         assert!(payload.get("issues").is_none());
     }
 
@@ -117,6 +136,8 @@ mod tests {
         assert_eq!(format_uptime(Duration::from_secs(2 * 3600 + 30 * 60)), "2h30m");
         assert_eq!(format_uptime(Duration::from_secs(15 * 60)), "15m");
         assert_eq!(format_uptime(Duration::from_secs(45)), "45s");
+        assert_eq!(format_uptime(Duration::from_secs(3 * 86400 + 2 * 3600)), "3d2h");
+        assert_eq!(format_uptime(Duration::from_secs(86400)), "1d0h");
     }
 
     #[tokio::test]
@@ -158,5 +179,25 @@ mod tests {
         assert_eq!(payload["status"], "degraded");
         let issues = payload["issues"].as_array().expect("issues array");
         assert!(issues.iter().any(|issue| issue == "paused"));
+    }
+
+    #[test]
+    fn test_collect_health_issues_config_unavailable() {
+        let state = DaemonState::new();
+        let issues = collect_health_issues(&state);
+        assert!(!issues.contains(&"config_unavailable".to_string()));
+    }
+
+    #[test]
+    fn test_health_response_serialization() {
+        let response = HealthResponse::new(
+            HealthStatus::Degraded,
+            "1h30m".to_string(),
+            vec!["paused".to_string(), "config_unavailable".to_string()],
+        );
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["status"], "degraded");
+        assert_eq!(json["uptime"], "1h30m");
+        assert_eq!(json["issues"], serde_json::json!(["paused", "config_unavailable"]));
     }
 }
