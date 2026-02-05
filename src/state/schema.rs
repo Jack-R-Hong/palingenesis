@@ -86,12 +86,14 @@ mod tests {
     #[test]
     fn test_state_serialization_roundtrip() {
         let mut state = StateFile::default();
+        state.stats.saves_count = 9;
         state.stats.time_saved_seconds = 360.5;
         let json = serde_json::to_string(&state).unwrap();
         let parsed: StateFile = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.version, state.version);
         assert_eq!(parsed.daemon_state, state.daemon_state);
         assert!(parsed.current_session.is_none());
+        assert_eq!(parsed.stats.saves_count, 9);
         assert_eq!(parsed.stats.time_saved_seconds, 360.5);
     }
 }

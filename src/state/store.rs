@@ -264,4 +264,17 @@ mod tests {
         let loaded = store.load();
         assert_eq!(loaded.stats.time_saved_seconds, 7200.0);
     }
+
+    #[test]
+    fn test_saves_count_persists_across_loads() {
+        let temp = tempfile::tempdir().unwrap();
+        let state_path = temp.path().join("state.json");
+        let store = StateStore::with_path(state_path.clone());
+        let mut state = StateFile::default();
+        state.stats.saves_count = 5;
+        store.save(&state).unwrap();
+
+        let loaded = store.load();
+        assert_eq!(loaded.stats.saves_count, 5);
+    }
 }
