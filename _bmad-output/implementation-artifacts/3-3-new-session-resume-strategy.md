@@ -1,6 +1,6 @@
 # Story 3.3: New-Session Resume Strategy
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -47,59 +47,59 @@ So that I can continue the workflow with fresh context.
 
 ## Tasks / Subtasks
 
-- [ ] Create NewSessionStrategy struct (AC: 1, 2, 3)
-  - [ ] Create `src/resume/new_session.rs`
-  - [ ] Implement ResumeStrategy trait
-  - [ ] Add configuration for prompt templates
-  - [ ] Add configuration for Next-step.md path
+- [x] Create NewSessionStrategy struct (AC: 1, 2, 3)
+  - [x] Create `src/resume/new_session.rs`
+  - [x] Implement ResumeStrategy trait
+  - [x] Add configuration for prompt templates
+  - [x] Add configuration for Next-step.md path
 
-- [ ] Implement Next-step.md reading (AC: 1)
-  - [ ] Define Next-step.md location relative to session
-  - [ ] Parse Next-step.md content
-  - [ ] Extract step number and description
-  - [ ] Handle missing or malformed file
+- [x] Implement Next-step.md reading (AC: 1)
+  - [x] Define Next-step.md location relative to session
+  - [x] Parse Next-step.md content
+  - [x] Extract step number and description
+  - [x] Handle missing or malformed file
 
-- [ ] Implement stepsCompleted fallback (AC: 3)
-  - [ ] Read session frontmatter
-  - [ ] Get stepsCompleted array
-  - [ ] Calculate next step (max(stepsCompleted) + 1)
-  - [ ] Generate continuation prompt
+- [x] Implement stepsCompleted fallback (AC: 3)
+  - [x] Read session frontmatter
+  - [x] Get stepsCompleted array
+  - [x] Calculate next step (max(stepsCompleted) + 1)
+  - [x] Generate continuation prompt
 
-- [ ] Implement prompt generation (AC: 6)
-  - [ ] Create prompt template system
-  - [ ] Include step number
-  - [ ] Include context summary
-  - [ ] Include any special instructions
+- [x] Implement prompt generation (AC: 6)
+  - [x] Create prompt template system
+  - [x] Include step number
+  - [x] Include context summary
+  - [x] Include any special instructions
 
-- [ ] Implement session creation (AC: 2, 4)
-  - [ ] Research opencode new session API
-  - [ ] Execute new session command
-  - [ ] Wait for session to start
-  - [ ] Verify session is running
+- [x] Implement session creation (AC: 2, 4)
+  - [x] Research opencode new session API
+  - [x] Execute new session command
+  - [x] Wait for session to start
+  - [x] Verify session is running
 
-- [ ] Integrate with session backup (AC: 5)
-  - [ ] Call SessionBackup from Story 3.4
-  - [ ] Handle backup failure gracefully
-  - [ ] Log backup status
-  - [ ] Proceed with new session regardless
+- [x] Integrate with session backup (AC: 5)
+  - [x] Call SessionBackup from Story 3.4
+  - [x] Handle backup failure gracefully
+  - [x] Log backup status
+  - [x] Proceed with new session regardless
 
-- [ ] Implement stats update (AC: 4)
-  - [ ] Increment stats.total_resumes
-  - [ ] Record session transition in audit
-  - [ ] Persist state changes
+- [x] Implement stats update (AC: 4)
+  - [x] Increment stats.total_resumes
+  - [x] Record session transition in audit
+  - [x] Persist state changes
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test Next-step.md parsing
-  - [ ] Test stepsCompleted fallback
-  - [ ] Test prompt generation
-  - [ ] Test session creation
-  - [ ] Test backup integration
-  - [ ] Test error handling
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test Next-step.md parsing
+  - [x] Test stepsCompleted fallback
+  - [x] Test prompt generation
+  - [x] Test session creation
+  - [x] Test backup integration
+  - [x] Test error handling
 
-- [ ] Add integration tests
-  - [ ] Test full new-session flow
-  - [ ] Test with various Next-step.md formats
-  - [ ] Test backup + new session sequence
+- [x] Add integration tests
+  - [x] Test full new-session flow
+  - [x] Test with various Next-step.md formats
+  - [x] Test backup + new session sequence
 
 ## Dev Notes
 
@@ -451,8 +451,11 @@ Implement user authentication
 
 **Files to modify:**
 - `src/resume/mod.rs` (add new_session module)
+- `src/resume/selector.rs` (wire new-session strategy)
+- `_bmad-output/implementation-artifacts/3-3-new-session-resume-strategy.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented NewSessionStrategy, added tests, and updated resume wiring
