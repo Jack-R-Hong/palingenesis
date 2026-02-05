@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -12,6 +13,8 @@ use tower_http::trace::TraceLayer;
 use tracing::{info, warn};
 
 use crate::config::schema::DaemonConfig;
+use crate::daemon::state::DaemonState;
+use crate::http::handlers;
 
 /// HTTP API server for external integrations.
 pub struct HttpServer {
@@ -22,7 +25,11 @@ pub struct HttpServer {
 
 impl HttpServer {
     /// Create a new HTTP server from daemon configuration.
-    pub fn from_config(config: &DaemonConfig, shutdown: CancellationToken) -> Result<Option<Self>> {
+    pub fn from_config(
+        config: &DaemonConfig,
+        shutdown: CancellationToken,
+        state: Arc<DaemonState>,
+    ) -> Result<Option<Self>> {
         if !config.http_enabled {
             return Ok(None);
         }
@@ -31,11 +38,17 @@ impl HttpServer {
             &config.http_bind,
             config.http_port,
             shutdown,
+            state,
         )?))
     }
 
     /// Create a new HTTP server with bind address and shutdown token.
-    pub fn new(bind: &str, port: u16, shutdown: CancellationToken) -> Result<Self> {
+    pub fn new(
+        bind: &str,
+        port: u16,
+        shutdown: CancellationToken,
+        state: Arc<DaemonState>,
+    ) -> Result<Self> {
         let bind_addr: SocketAddr = format!("{bind}:{port}")
             .parse()
             .with_context(|| format!("Invalid HTTP bind address: {bind}:{port}"))?;
@@ -47,7 +60,7 @@ impl HttpServer {
             );
         }
 
-        let router = Self::create_router();
+        let router = Self::create_router(state);
 
         Ok(Self {
             bind_addr,
@@ -87,9 +100,11 @@ impl HttpServer {
         Ok(())
     }
 
-    fn create_router() -> Router {
+    fn create_router(state: Arc<DaemonState>) -> Router {
         Router::new()
+            .route("/health", axum::routing::get(handlers::health::health_handler))
             .fallback(Self::fallback_handler)
+            .with_state(state)
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(|request: &Request<Body>| {
@@ -99,8 +114,8 @@ impl HttpServer {
                             uri = %request.uri(),
                         )
                     })
-                    .on_request(|_request: &Request<Body>, _span: &tracing::Span| {
-                        tracing::info!("started");
+                    .on_request(|request: &Request<Body>, _span: &tracing::Span| {
+                        tracing::info!(method = %request.method(), uri = %request.uri(), "http_request");
                     })
                     .on_response(|response: &axum::http::Response<_>, latency: Duration, _span: &tracing::Span| {
                         let status = response.status();
@@ -201,13 +216,24 @@ mod tests {
 
     #[test]
     fn test_bind_addr_parsing() {
-        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        let server = HttpServer::new(
+            "127.0.0.1",
+            7654,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         assert_eq!(server.bind_addr(), "127.0.0.1:7654".parse().unwrap());
     }
 
     #[test]
     fn test_invalid_bind_addr_returns_error() {
-        let result = HttpServer::new("not-an-ip", 7654, CancellationToken::new());
+        let result = HttpServer::new(
+            "not-an-ip",
+            7654,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        );
         assert!(result.is_err());
         let err_msg = result.err().unwrap().to_string();
         assert!(err_msg.contains("Invalid HTTP bind address"));
@@ -215,7 +241,13 @@ mod tests {
 
     #[test]
     fn test_custom_port_configuration() {
-        let server = HttpServer::new("127.0.0.1", 9001, CancellationToken::new()).unwrap();
+        let server = HttpServer::new(
+            "127.0.0.1",
+            9001,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         assert_eq!(server.bind_addr().port(), 9001);
     }
 
@@ -223,7 +255,13 @@ mod tests {
     fn test_binding_all_interfaces_warns() {
         let _tracing = TRACING_LOCK.lock().unwrap();
         let (buffer, _guard) = capture_logs();
-        let _server = HttpServer::new("0.0.0.0", 7654, CancellationToken::new()).unwrap();
+        let _server = HttpServer::new(
+            "0.0.0.0",
+            7654,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         let output = String::from_utf8(buffer.lock().unwrap().clone()).unwrap();
         assert!(output.contains("HTTP API binding to all interfaces"));
     }
@@ -232,13 +270,24 @@ mod tests {
     fn test_http_disabled_returns_none() {
         let mut config = DaemonConfig::default();
         config.http_enabled = false;
-        let result = HttpServer::from_config(&config, CancellationToken::new()).unwrap();
+        let result = HttpServer::from_config(
+            &config,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         assert!(result.is_none());
     }
 
     #[tokio::test]
     async fn test_router_fallback_returns_json() {
-        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        let server = HttpServer::new(
+            "127.0.0.1",
+            7654,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         let response = server
             .router()
             .oneshot(
@@ -259,7 +308,13 @@ mod tests {
     async fn test_request_logging() {
         let _tracing = TRACING_LOCK.lock().unwrap();
         let (buffer, _guard) = capture_logs();
-        let server = HttpServer::new("127.0.0.1", 7654, CancellationToken::new()).unwrap();
+        let server = HttpServer::new(
+            "127.0.0.1",
+            7654,
+            CancellationToken::new(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         let response = server
             .router()
             .oneshot(
@@ -280,7 +335,13 @@ mod tests {
     async fn test_server_start_and_shutdown() {
         let port = pick_port();
         let shutdown = CancellationToken::new();
-        let server = HttpServer::new("127.0.0.1", port, shutdown.clone()).unwrap();
+        let server = HttpServer::new(
+            "127.0.0.1",
+            port,
+            shutdown.clone(),
+            Arc::new(DaemonState::new()),
+        )
+        .unwrap();
         let handle = tokio::spawn(async move {
             server.start().await.unwrap();
         });
