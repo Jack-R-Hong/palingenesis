@@ -89,7 +89,7 @@ development_status:
   # Epic 6: Remote Control & External API
   epic-6: in-progress
   6-1-http-api-server-setup: done
-  6-2-health-endpoint: backlog
+  6-2-health-endpoint: ready-for-dev
   6-3-status-api-endpoint: backlog
   6-4-control-api-endpoints: backlog
   6-5-events-sse-stream: backlog
