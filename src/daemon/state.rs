@@ -40,6 +40,13 @@ impl DaemonState {
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
+
+    pub fn daemon_config(&self) -> Option<crate::config::schema::DaemonConfig> {
+        match self.config.read() {
+            Ok(guard) => Some(guard.daemon.clone()),
+            Err(_) => None,
+        }
+    }
 }
 
 impl Default for DaemonState {

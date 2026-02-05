@@ -6,9 +6,10 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::daemon::pid::{PidError, PidFile};
-use crate::daemon::shutdown::{ShutdownCoordinator, ShutdownResult};
+use crate::daemon::shutdown::{SHUTDOWN_TIMEOUT, ShutdownCoordinator, ShutdownResult};
 use crate::daemon::signals::{listen_for_signals, DaemonSignal};
 use crate::daemon::state::DaemonState;
+use crate::http::HttpServer;
 use crate::ipc::socket::{DaemonStateAccess, IpcError, IpcServer};
 
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +26,7 @@ pub struct Daemon {
     ipc_server: IpcServer,
     shutdown: ShutdownCoordinator,
     state: Arc<DaemonState>,
+    http_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Daemon {
@@ -34,6 +36,7 @@ impl Daemon {
             ipc_server: IpcServer::new(),
             shutdown: ShutdownCoordinator::new(),
             state: Arc::new(DaemonState::new()),
+            http_handle: None,
         }
     }
 
@@ -83,6 +86,28 @@ impl Daemon {
             }));
         }
 
+        if let Some(config) = self.state.daemon_config() {
+            match HttpServer::from_config(&config, cancel.clone()) {
+                Ok(Some(server)) => {
+                    let server_cancel = cancel.clone();
+                    let handle = tokio::spawn(async move {
+                        let error_cancel = server_cancel.clone();
+                        if let Err(err) = server.start().await {
+                            error!(error = %err, "HTTP server stopped with error");
+                            error_cancel.cancel();
+                        }
+                    });
+                    self.http_handle = Some(handle);
+                }
+                Ok(None) => {}
+                Err(err) => {
+                    warn!(error = %err, "Failed to configure HTTP server");
+                }
+            }
+        } else {
+            warn!("Config lock poisoned; skipping HTTP server startup");
+        }
+
         let server = std::mem::take(&mut self.ipc_server);
         let server_state = Arc::clone(&self.state);
         let server_cancel = cancel.clone();
@@ -102,6 +127,14 @@ impl Daemon {
             ShutdownResult::Graceful => info!("Shutdown completed"),
             ShutdownResult::TimedOut { hung_tasks } => {
                 warn!(hung_tasks, "Shutdown timed out")
+            }
+        }
+
+        if let Some(handle) = self.http_handle.take() {
+            match time::timeout(SHUTDOWN_TIMEOUT, handle).await {
+                Ok(Ok(())) => info!("HTTP server stopped"),
+                Ok(Err(err)) => warn!(error = %err, "HTTP server task failed"),
+                Err(_) => warn!("HTTP server shutdown timed out"),
             }
         }
 
