@@ -50,6 +50,7 @@ pub struct Metrics {
     resumes_total: Family<ResumeReasonLabels, Counter>,
     resumes_success_total: Counter,
     resumes_failure_total: Family<ResumeFailureLabels, Counter>,
+    saves_total: Counter,
     sessions_started_total: Counter,
     rate_limits_total: Counter,
     context_exhaustions_total: Counter,
@@ -134,6 +135,13 @@ impl Metrics {
             format!("{METRICS_NAMESPACE}_resumes_failure_total"),
             "Total number of failed resume attempts",
             resumes_failure_total.clone(),
+        );
+
+        let saves_total = Counter::default();
+        registry.register(
+            format!("{METRICS_NAMESPACE}_saves_total"),
+            "Total number of times palingenesis saved work by automatically resuming",
+            saves_total.clone(),
         );
 
         let sessions_started_total = Counter::default();
@@ -231,6 +239,7 @@ impl Metrics {
             resumes_total,
             resumes_success_total,
             resumes_failure_total,
+            saves_total,
             sessions_started_total,
             rate_limits_total,
             context_exhaustions_total,
@@ -246,6 +255,7 @@ impl Metrics {
         };
 
         metrics.set_static_info();
+        metrics.initialize_saves_total();
         metrics.initialize_time_saved_total();
         metrics
     }
@@ -311,6 +321,10 @@ impl Metrics {
                 })
                 .inc();
         }
+    }
+
+    pub fn record_save(&self) {
+        self.saves_total.inc();
     }
 
     pub fn record_session_started(&self) {
@@ -399,6 +413,14 @@ impl Metrics {
             self.time_saved_seconds_total.inc_by(total_saved);
         }
     }
+
+    fn initialize_saves_total(&self) {
+        let store = StateStore::new();
+        let state = store.load();
+        if state.stats.saves_count > 0 {
+            self.saves_total.inc_by(state.stats.saves_count);
+        }
+    }
 }
 
 impl Default for Metrics {
@@ -459,12 +481,14 @@ mod tests {
         metrics.record_detection(Duration::from_millis(50), "rate_limit");
         metrics.record_wait(Duration::from_secs(2));
         metrics.record_session_started();
+        metrics.record_save();
         metrics.record_time_saved(360.0);
         let output = metrics.encode().expect("encode metrics");
 
         assert!(output.contains("palingenesis_resumes_total"));
         assert!(output.contains("palingenesis_resumes_success_total"));
         assert!(output.contains("palingenesis_resumes_failure_total"));
+        assert!(output.contains("palingenesis_saves_total"));
         assert!(output.contains("palingenesis_sessions_started_total"));
         assert!(output.contains("palingenesis_rate_limits_total"));
         assert!(output.contains("palingenesis_context_exhaustions_total"));
@@ -505,6 +529,28 @@ mod tests {
         assert!(output.contains("palingenesis_active_sessions 1"));
         assert!(output.contains("palingenesis_current_session_steps_completed 3"));
         assert!(output.contains("palingenesis_current_session_steps_total 8"));
+
+        remove_env_var("PALINGENESIS_STATE");
+    }
+
+    #[test]
+    fn test_metrics_initialize_saves_from_state() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = tempdir().unwrap();
+        let state_dir = temp.path().join("state");
+        set_env_var("PALINGENESIS_STATE", &state_dir);
+
+        let store = StateStore::new();
+        let mut state = StateFile::default();
+        state.stats = Stats {
+            saves_count: 12,
+            ..Stats::default()
+        };
+        store.save(&state).expect("save state");
+
+        let metrics = Metrics::new();
+        let saves = metrics.saves_total.get();
+        assert_eq!(saves, 12);
 
         remove_env_var("PALINGENESIS_STATE");
     }

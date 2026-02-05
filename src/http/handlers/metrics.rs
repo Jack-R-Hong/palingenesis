@@ -121,6 +121,7 @@ mod tests {
         assert!(text.contains("palingenesis_resumes_total"));
         assert!(text.contains("palingenesis_resumes_success_total"));
         assert!(text.contains("palingenesis_resumes_failure_total"));
+        assert!(text.contains("palingenesis_saves_total"));
         assert!(text.contains("palingenesis_sessions_started_total"));
         assert!(text.contains("palingenesis_rate_limits_total"));
         assert!(text.contains("palingenesis_context_exhaustions_total"));
