@@ -26,6 +26,8 @@ serde_json = "1.0.145"
 serde_yaml = "0.9"
 toml = "0.9.11"
 regex = "1.11"
+hex = "0.4"
+serde_urlencoded = "0.7"
 
 # File watching
 notify = "8.2.0"
@@ -44,6 +46,9 @@ tokio-stream = { version = "0.1", features = ["sync"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"
 async-trait = "0.1"
+hmac = "0.12"
+sha2 = "0.10"
+ed25519-dalek = "2.1"
 
 # Platform directories
 dirs = "6.0"

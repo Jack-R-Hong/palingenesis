@@ -36,6 +36,9 @@ pub struct Config {
     /// Notification channel configuration section.
     /// Example: [notifications]
     pub notifications: NotificationsConfig,
+    /// Bot command configuration section.
+    /// Example: [bot]
+    pub bot: BotConfig,
     /// Optional OpenTelemetry configuration section.
     /// Example: [otel]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -49,6 +52,7 @@ impl Default for Config {
             monitoring: MonitoringConfig::default(),
             resume: ResumeConfig::default(),
             notifications: NotificationsConfig::default(),
+            bot: BotConfig::default(),
             otel: None,
         }
     }
@@ -208,6 +212,60 @@ impl Default for NotificationsConfig {
             slack: None,
         }
     }
+}
+
+/// Bot command configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct BotConfig {
+    /// Enable bot command endpoints.
+    /// Example: enabled = true
+    pub enabled: bool,
+    /// Allow all users if the authorized list is empty.
+    /// Example: allow_all_users = true
+    pub allow_all_users: bool,
+    /// Discord application ID.
+    /// Example: discord_application_id = "1234567890"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discord_application_id: Option<String>,
+    /// Discord public key for signature verification.
+    /// Example: discord_public_key = "a1b2..."
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discord_public_key: Option<String>,
+    /// Slack signing secret for signature verification.
+    /// Example: slack_signing_secret = "abcd1234"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slack_signing_secret: Option<String>,
+    /// Authorized user list across platforms.
+    pub authorized_users: Vec<AuthorizedUser>,
+}
+
+impl Default for BotConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            allow_all_users: true,
+            discord_application_id: None,
+            discord_public_key: None,
+            slack_signing_secret: None,
+            authorized_users: Vec::new(),
+        }
+    }
+}
+
+/// Authorized user entry for bot commands.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct AuthorizedUser {
+    pub platform: BotPlatform,
+    pub user_id: String,
+}
+
+/// Supported bot platforms.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum BotPlatform {
+    Discord,
+    Slack,
 }
 
 /// Webhook notification configuration.

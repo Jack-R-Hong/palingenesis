@@ -58,6 +58,13 @@ impl DaemonState {
             Err(_) => None,
         }
     }
+
+    pub fn bot_config(&self) -> Option<crate::config::schema::BotConfig> {
+        match self.config.read() {
+            Ok(guard) => Some(guard.bot.clone()),
+            Err(_) => None,
+        }
+    }
 }
 
 impl Default for DaemonState {

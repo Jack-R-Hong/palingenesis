@@ -176,7 +176,74 @@ pub fn validate_config(config: &Config) -> ValidationResult {
         }
     }
 
+    validate_bot_config(config, &mut errors, &mut warnings);
+
     ValidationResult { errors, warnings }
+}
+
+fn validate_bot_config(
+    config: &Config,
+    errors: &mut Vec<ValidationError>,
+    warnings: &mut Vec<ValidationWarning>,
+) {
+    let bot = &config.bot;
+    if !bot.enabled {
+        return;
+    }
+
+    if bot.discord_public_key.is_none() && bot.slack_signing_secret.is_none() {
+        errors.push(ValidationError {
+            field: "bot.enabled".to_string(),
+            message: "Bot enabled but no signing keys configured".to_string(),
+            suggestion: Some("Set bot.discord_public_key or bot.slack_signing_secret".to_string()),
+        });
+    }
+
+    if let Some(ref key) = bot.discord_public_key {
+        let trimmed = key.trim();
+        if trimmed.is_empty() {
+            errors.push(ValidationError {
+                field: "bot.discord_public_key".to_string(),
+                message: "Discord public key cannot be empty".to_string(),
+                suggestion: None,
+            });
+        } else if hex::decode(trimmed).is_err() {
+            errors.push(ValidationError {
+                field: "bot.discord_public_key".to_string(),
+                message: "Discord public key must be hex-encoded".to_string(),
+                suggestion: Some(
+                    "Use the hex public key from the Discord developer portal".to_string(),
+                ),
+            });
+        }
+    }
+
+    if let Some(ref secret) = bot.slack_signing_secret {
+        if secret.trim().is_empty() {
+            errors.push(ValidationError {
+                field: "bot.slack_signing_secret".to_string(),
+                message: "Slack signing secret cannot be empty".to_string(),
+                suggestion: None,
+            });
+        }
+    }
+
+    if bot.authorized_users.is_empty() && !bot.allow_all_users {
+        warnings.push(ValidationWarning {
+            field: "bot.authorized_users".to_string(),
+            message: "No authorized users configured; commands will be rejected".to_string(),
+        });
+    }
+
+    for (index, user) in bot.authorized_users.iter().enumerate() {
+        if user.user_id.trim().is_empty() {
+            errors.push(ValidationError {
+                field: format!("bot.authorized_users[{index}].user_id"),
+                message: "Authorized user ID cannot be empty".to_string(),
+                suggestion: None,
+            });
+        }
+    }
 }
 
 fn validate_log_level(level: &str, errors: &mut Vec<ValidationError>) {
@@ -312,5 +379,25 @@ mod tests {
             .errors
             .iter()
             .any(|err| err.field == "notifications.webhook.url"));
+    }
+
+    #[test]
+    fn test_validate_config_reports_missing_bot_keys() {
+        let mut config = Config::default();
+        config.bot.enabled = true;
+        let result = validate_config(&config);
+        assert!(result.errors.iter().any(|err| err.field == "bot.enabled"));
+    }
+
+    #[test]
+    fn test_validate_config_reports_invalid_discord_key() {
+        let mut config = Config::default();
+        config.bot.enabled = true;
+        config.bot.discord_public_key = Some("not-hex".to_string());
+        let result = validate_config(&config);
+        assert!(result
+            .errors
+            .iter()
+            .any(|err| err.field == "bot.discord_public_key"));
     }
 }
