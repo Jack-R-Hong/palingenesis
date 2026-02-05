@@ -38,6 +38,15 @@ impl StopReason {
             StopReason::Unknown(_) => false,
         }
     }
+
+    pub fn metrics_reason_label(&self) -> Option<&'static str> {
+        match self {
+            StopReason::RateLimit(_) => Some("rate_limit"),
+            StopReason::ContextExhausted(_) => Some("context_exhausted"),
+            StopReason::UserExit(_) | StopReason::Completed => Some("manual"),
+            StopReason::Unknown(_) => None,
+        }
+    }
 }
 
 /// Information about a user-initiated exit.

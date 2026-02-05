@@ -1,5 +1,6 @@
+use std::fs;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -10,9 +11,10 @@ use crate::monitor::events::{
     MonitorEvent, MonitorEventReceiver, MonitorEventSender, WatchEvent, WatchEventReceiver,
 };
 use crate::monitor::frontmatter::SessionParser;
-use crate::monitor::process::{ProcessEvent, ProcessEventReceiver, ProcessError, ProcessMonitor};
+use crate::monitor::process::{ProcessError, ProcessEvent, ProcessEventReceiver, ProcessMonitor};
 use crate::monitor::session::Session;
 use crate::monitor::watcher::{SessionWatcher, WatcherError};
+use crate::telemetry::Metrics;
 
 const DEFAULT_CHANNEL_CAPACITY: usize = 100;
 const DEFAULT_HEALTH_CHECK_INTERVAL_SECS: u64 = 60;
@@ -195,6 +197,16 @@ impl Monitor {
                     self.classifier.classify_content("", exit_code)
                 };
 
+                if let Some(metrics) = Metrics::global() {
+                    let reason = classification
+                        .reason
+                        .metrics_reason_label()
+                        .unwrap_or("unknown");
+                    if let Some(latency) = estimate_detection_latency(self.current_session.as_ref()) {
+                        metrics.record_detection(latency, reason);
+                    }
+                }
+
                 let _ = self
                     .try_send(
                         tx,
@@ -224,6 +236,13 @@ impl Monitor {
             }
         }
     }
+}
+
+fn estimate_detection_latency(session: Option<&Session>) -> Option<Duration> {
+    let session = session?;
+    let metadata = fs::metadata(&session.path).ok()?;
+    let modified = metadata.modified().ok()?;
+    SystemTime::now().duration_since(modified).ok()
 }
 
 impl Default for Monitor {
