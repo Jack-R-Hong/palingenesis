@@ -38,6 +38,7 @@ reqwest = { version = "0.13.1", default-features = false, features = ["json", "r
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter"] }
 rand = "0.8"
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 # Error handling
 thiserror = "2.0.17"
@@ -70,3 +71,4 @@ tempfile = "3.18"
 assert_cmd = "2.0"
 predicates = "3.1"
 tokio = { version = "1.49", features = ["test-util", "macros", "rt-multi-thread"] }
+http-body-util = "0.1"
