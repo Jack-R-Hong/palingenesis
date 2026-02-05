@@ -107,6 +107,18 @@ impl HttpServer {
                 "/api/v1/status",
                 axum::routing::get(handlers::status::status_handler),
             )
+            .route(
+                "/api/v1/pause",
+                axum::routing::post(handlers::control::pause_handler),
+            )
+            .route(
+                "/api/v1/resume",
+                axum::routing::post(handlers::control::resume_handler),
+            )
+            .route(
+                "/api/v1/new-session",
+                axum::routing::post(handlers::control::new_session_handler),
+            )
             .fallback(Self::fallback_handler)
             .with_state(state)
             .layer(
@@ -165,6 +177,7 @@ mod tests {
 
     use tower::ServiceExt;
     use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::EnvFilter;
 
     use crate::test_utils::TRACING_LOCK;
 
@@ -204,11 +217,13 @@ mod tests {
         let writer = BufferWriter {
             buffer: Arc::clone(&buffer),
         };
-        let subscriber = tracing_subscriber::registry().with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(writer)
-                .with_ansi(false),
-        );
+        let subscriber = tracing_subscriber::registry()
+            .with(EnvFilter::new("info"))
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(writer)
+                    .with_ansi(false),
+            );
         let guard = tracing::subscriber::set_default(subscriber);
         (buffer, guard)
     }
