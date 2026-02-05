@@ -8,9 +8,9 @@ use opentelemetry_otlp::WithExportConfig;
 use tracing::info;
 use tracing::warn;
 
+use crate::config::Paths;
 use crate::config::schema::{Config, OtelConfig};
 use crate::config::validation::validate_config;
-use crate::config::Paths;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OtelProtocol {
@@ -109,29 +109,38 @@ pub fn build_otel_layer(config: &OtelConfig) -> Option<OtelLayer> {
             opentelemetry_sdk::propagation::TraceContextPropagator::new(),
         );
 
-        let exporter = match protocol {
-            OtelProtocol::Http => opentelemetry_otlp::new_exporter()
-                .http()
-                .with_endpoint(endpoint.to_string()),
-            OtelProtocol::Grpc => opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(endpoint.to_string()),
+        let trace_config = || {
+            opentelemetry_sdk::trace::Config::default()
+                .with_resource(opentelemetry_sdk::Resource::new(vec![
+                    opentelemetry::KeyValue::new("service.name", config.service_name.clone()),
+                ]))
+                .with_sampler(opentelemetry_sdk::trace::Sampler::TraceIdRatioBased(
+                    sampling_ratio,
+                ))
         };
 
-        let trace_config = opentelemetry_sdk::trace::Config::default()
-            .with_resource(opentelemetry_sdk::Resource::new(vec![
-                opentelemetry::KeyValue::new("service.name", config.service_name.clone()),
-            ]))
-            .with_sampler(opentelemetry_sdk::trace::Sampler::TraceIdRatioBased(
-                sampling_ratio,
-            ));
+        let tracer = match protocol {
+            OtelProtocol::Http => opentelemetry_otlp::new_pipeline()
+                .tracing()
+                .with_exporter(
+                    opentelemetry_otlp::new_exporter()
+                        .http()
+                        .with_endpoint(endpoint.to_string()),
+                )
+                .with_trace_config(trace_config())
+                .install_batch(opentelemetry_sdk::runtime::Tokio),
+            OtelProtocol::Grpc => opentelemetry_otlp::new_pipeline()
+                .tracing()
+                .with_exporter(
+                    opentelemetry_otlp::new_exporter()
+                        .tonic()
+                        .with_endpoint(endpoint.to_string()),
+                )
+                .with_trace_config(trace_config())
+                .install_batch(opentelemetry_sdk::runtime::Tokio),
+        };
 
-        let tracer = match opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(exporter)
-            .with_trace_config(trace_config)
-            .install_batch(opentelemetry_sdk::runtime::Tokio)
-        {
+        let tracer = match tracer {
             Ok(tracer) => tracer,
             Err(err) => {
                 warn!(error = %err, "OpenTelemetry tracing initialization failed");
@@ -140,7 +149,7 @@ pub fn build_otel_layer(config: &OtelConfig) -> Option<OtelLayer> {
         };
 
         info!("OpenTelemetry tracing enabled");
-        return Some(tracing_opentelemetry::layer().with_tracer(tracer));
+        Some(tracing_opentelemetry::layer().with_tracer(tracer))
     }
 
     #[cfg(not(feature = "otel"))]

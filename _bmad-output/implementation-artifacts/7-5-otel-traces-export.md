@@ -5,7 +5,7 @@
 **Epic:** 7 - Observability & Metrics
 **Story ID:** 7-5
 **Title:** OTEL Traces Export
-**Status:** ready-for-dev
+**Status:** done
 **Priority:** Growth
 **Story Points:** 3
 

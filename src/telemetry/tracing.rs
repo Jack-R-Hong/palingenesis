@@ -6,10 +6,10 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::Level;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone)]
 pub struct TracingConfig {
@@ -151,6 +151,9 @@ pub fn init_tracing(
     let default_guard = match (config.log_to_stderr, file.as_ref(), otel_layer) {
         (true, Some(file_ref), otel_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
+            let base = tracing_subscriber::registry()
+                .with(otel_layer)
+                .with(env_filter);
             if config.json_format {
                 let stderr_layer = tracing_subscriber::fmt::layer()
                     .json()
@@ -164,12 +167,7 @@ pub fn init_tracing(
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(stderr_layer)
-                    .with(file_layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(stderr_layer).with(file_layer).set_default()
             } else {
                 let stderr_layer = tracing_subscriber::fmt::layer()
                     .with_writer(std::io::stderr)
@@ -181,15 +179,13 @@ pub fn init_tracing(
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(stderr_layer)
-                    .with(file_layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(stderr_layer).with(file_layer).set_default()
             }
         }
         (true, None, otel_layer) => {
+            let base = tracing_subscriber::registry()
+                .with(otel_layer)
+                .with(env_filter);
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
                     .json()
@@ -197,26 +193,21 @@ pub fn init_tracing(
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(layer).set_default()
             } else {
                 let layer = tracing_subscriber::fmt::layer()
                     .with_writer(std::io::stderr)
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(layer).set_default()
             }
         }
         (false, Some(file_ref), otel_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
+            let base = tracing_subscriber::registry()
+                .with(otel_layer)
+                .with(env_filter);
             if config.json_format {
                 let layer = tracing_subscriber::fmt::layer()
                     .json()
@@ -224,27 +215,19 @@ pub fn init_tracing(
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(layer).set_default()
             } else {
                 let layer = tracing_subscriber::fmt::layer()
                     .with_writer(file_writer)
                     .with_target(true)
                     .with_level(true)
                     .with_timer(tracing_subscriber::fmt::time::SystemTime);
-                tracing_subscriber::registry()
-                    .with(env_filter)
-                    .with(layer)
-                    .with(otel_layer)
-                    .set_default()
+                base.with(layer).set_default()
             }
         }
         (false, None, otel_layer) => tracing_subscriber::registry()
-            .with(env_filter)
             .with(otel_layer)
+            .with(env_filter)
             .set_default(),
     };
 
