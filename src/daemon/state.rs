@@ -1,12 +1,12 @@
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::RwLock;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use tracing::{error, info, warn};
 
+use crate::config::Paths;
 use crate::config::schema::Config;
 use crate::config::validation::validate_config;
-use crate::config::Paths;
 use crate::ipc::protocol::DaemonStatus;
 use crate::ipc::socket::DaemonStateAccess;
 use crate::monitor::detection::detect_assistants;
@@ -62,6 +62,13 @@ impl DaemonState {
     pub fn bot_config(&self) -> Option<crate::config::schema::BotConfig> {
         match self.config.read() {
             Ok(guard) => Some(guard.bot.clone()),
+            Err(_) => None,
+        }
+    }
+
+    pub fn otel_config(&self) -> Option<crate::config::schema::OtelConfig> {
+        match self.config.read() {
+            Ok(guard) => guard.otel.clone(),
             Err(_) => None,
         }
     }
