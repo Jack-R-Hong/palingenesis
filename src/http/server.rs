@@ -141,8 +141,11 @@ impl HttpServer {
         (
             StatusCode::NOT_FOUND,
             Json(json!({
-                "error": "not_found",
-                "message": "The requested endpoint does not exist",
+                "success": false,
+                "error": {
+                    "code": "not_found",
+                    "message": "The requested endpoint does not exist"
+                }
             })),
         )
     }
@@ -305,7 +308,8 @@ mod tests {
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload["error"], "not_found");
+        assert_eq!(payload["success"], false);
+        assert_eq!(payload["error"]["code"], "not_found");
     }
 
     #[tokio::test]

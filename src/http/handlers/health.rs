@@ -9,6 +9,21 @@ use serde::Serialize;
 use crate::daemon::state::DaemonState;
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct HealthEnvelope {
+    success: bool,
+    data: HealthResponse,
+}
+
+impl HealthEnvelope {
+    fn new(data: HealthResponse) -> Self {
+        Self {
+            success: true,
+            data,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum HealthStatus {
     Ok,
@@ -24,7 +39,6 @@ pub struct HealthResponse {
 }
 
 impl HealthResponse {
-    /// Creates a new health response with the given status, uptime, and issues.
     pub(crate) fn new(status: HealthStatus, uptime: String, issues: Vec<String>) -> Self {
         Self {
             status,
@@ -37,7 +51,7 @@ impl HealthResponse {
 /// Handles GET /health requests with daemon uptime and status.
 pub async fn health_handler(
     State(state): State<Arc<DaemonState>>,
-) -> (StatusCode, Json<HealthResponse>) {
+) -> (StatusCode, Json<HealthEnvelope>) {
     let issues = collect_health_issues(&state);
     let status = if issues.is_empty() {
         HealthStatus::Ok
@@ -45,7 +59,7 @@ pub async fn health_handler(
         HealthStatus::Degraded
     };
     let uptime = format_uptime(state.uptime());
-    let response = HealthResponse::new(status, uptime, issues);
+    let response = HealthEnvelope::new(HealthResponse::new(status, uptime, issues));
     (StatusCode::OK, Json(response))
 }
 
@@ -123,12 +137,13 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload["status"], "ok");
+        assert_eq!(payload["success"], true);
+        assert_eq!(payload["data"]["status"], "ok");
         assert!(
-            payload["uptime"].as_str().is_some_and(|s| !s.is_empty()),
+            payload["data"]["uptime"].as_str().is_some_and(|s| !s.is_empty()),
             "uptime should be a non-empty string"
         );
-        assert!(payload.get("issues").is_none());
+        assert!(payload["data"].get("issues").is_none());
     }
 
     #[test]
@@ -176,8 +191,9 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload["status"], "degraded");
-        let issues = payload["issues"].as_array().expect("issues array");
+        assert_eq!(payload["success"], true);
+        assert_eq!(payload["data"]["status"], "degraded");
+        let issues = payload["data"]["issues"].as_array().expect("issues array");
         assert!(issues.iter().any(|issue| issue == "paused"));
     }
 

@@ -6,10 +6,14 @@ use axum::Json;
 use serde::Serialize;
 
 use crate::config::schema::{DaemonConfig, MonitoringConfig};
+use crate::daemon::pid::PidFile;
 use crate::daemon::state::DaemonState;
 use crate::ipc::protocol::DaemonStatus;
 use crate::ipc::socket::DaemonStateAccess;
 
+/// Envelope wrapper for status API response per ARCH23.
+///
+/// All API responses use consistent format: `{ "success": bool, "data": {...} }`.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct StatusEnvelope {
     success: bool,
@@ -25,19 +29,22 @@ impl StatusEnvelope {
     }
 }
 
+/// Full daemon status response with all required fields per AC1/AC2.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct StatusResponse {
     state: String,
+    pid: Option<u32>,
     current_session: Option<String>,
     stats: StatsResponse,
     config_summary: ConfigSummary,
 }
 
 impl StatusResponse {
-    fn from_status(status: DaemonStatus, config_summary: ConfigSummary) -> Self {
+    fn from_status(status: DaemonStatus, pid: Option<u32>, config_summary: ConfigSummary) -> Self {
         let stats = StatsResponse::from_status(&status);
         Self {
             state: status.state,
+            pid,
             current_session: status.current_session,
             stats,
             config_summary,
@@ -45,6 +52,7 @@ impl StatusResponse {
     }
 }
 
+/// Runtime statistics for the daemon.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct StatsResponse {
     uptime_secs: u64,
@@ -62,6 +70,7 @@ impl StatsResponse {
     }
 }
 
+/// Key configuration values exposed via status API.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ConfigSummary {
     http_enabled: bool,
@@ -86,9 +95,14 @@ pub async fn status_handler(
     State(state): State<Arc<DaemonState>>,
 ) -> (StatusCode, Json<StatusEnvelope>) {
     let status = state.get_status();
+    let pid = read_daemon_pid();
     let config_summary = build_config_summary(&state);
-    let response = StatusEnvelope::new(StatusResponse::from_status(status, config_summary));
+    let response = StatusEnvelope::new(StatusResponse::from_status(status, pid, config_summary));
     (StatusCode::OK, Json(response))
+}
+
+fn read_daemon_pid() -> Option<u32> {
+    PidFile::new().read().ok()
 }
 
 fn build_config_summary(state: &DaemonState) -> ConfigSummary {
@@ -130,6 +144,7 @@ mod tests {
 
         assert_eq!(payload["success"], true);
         assert!(payload["data"]["state"].as_str().is_some());
+        assert!(payload["data"].get("pid").is_some());
         assert!(payload["data"]["current_session"].is_null());
         assert!(payload["data"]["stats"]["uptime_secs"].as_u64().is_some());
         assert!(payload["data"]["stats"]["saves_count"].as_u64().is_some());
