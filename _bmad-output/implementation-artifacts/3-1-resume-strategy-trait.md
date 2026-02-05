@@ -1,6 +1,6 @@
 # Story 3.1: Resume Strategy Trait
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -43,53 +43,53 @@ So that different resume approaches are interchangeable.
 
 ## Tasks / Subtasks
 
-- [ ] Create resume module structure (AC: 1, 4, 5)
-  - [ ] Create `src/resume/mod.rs` with module exports
-  - [ ] Create `src/resume/strategy.rs` with ResumeStrategy trait
-  - [ ] Create `src/resume/context.rs` with ResumeContext struct
-  - [ ] Create `src/resume/outcome.rs` with ResumeOutcome struct
+- [x] Create resume module structure (AC: 1, 4, 5)
+  - [x] Create `src/resume/mod.rs` with module exports
+  - [x] Create `src/resume/strategy.rs` with ResumeStrategy trait
+  - [x] Create `src/resume/context.rs` with ResumeContext struct
+  - [x] Create `src/resume/outcome.rs` with ResumeOutcome struct
 
-- [ ] Define ResumeContext struct (AC: 4)
-  - [ ] Add session_path: PathBuf field
-  - [ ] Add stop_reason: StopReason field (from classifier)
-  - [ ] Add retry_after: Option<Duration> field
-  - [ ] Add session_metadata: Option<Session> field
-  - [ ] Add attempt_number: u32 field
-  - [ ] Add timestamp: DateTime<Utc> field
+- [x] Define ResumeContext struct (AC: 4)
+  - [x] Add session_path: PathBuf field
+  - [x] Add stop_reason: StopReason field (from classifier)
+  - [x] Add retry_after: Option<Duration> field
+  - [x] Add session_metadata: Option<Session> field
+  - [x] Add attempt_number: u32 field
+  - [x] Add timestamp: DateTime<Utc> field
 
-- [ ] Define ResumeOutcome enum (AC: 5)
-  - [ ] Define `Success` variant with session continuation info
-  - [ ] Define `Failure` variant with error details
-  - [ ] Define `Skipped` variant with reason (e.g., user exit)
-  - [ ] Define `Delayed` variant with next attempt time
+- [x] Define ResumeOutcome enum (AC: 5)
+  - [x] Define `Success` variant with session continuation info
+  - [x] Define `Failure` variant with error details
+  - [x] Define `Skipped` variant with reason (e.g., user exit)
+  - [x] Define `Delayed` variant with next attempt time
 
-- [ ] Define ResumeStrategy trait (AC: 1)
-  - [ ] Define `async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError>`
-  - [ ] Define `fn name(&self) -> &'static str` for logging
-  - [ ] Define `fn should_retry(&self, outcome: &ResumeOutcome) -> bool`
-  - [ ] Use async_trait for async trait methods
+- [x] Define ResumeStrategy trait (AC: 1)
+  - [x] Define `async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError>`
+  - [x] Define `fn name(&self) -> &'static str` for logging
+  - [x] Define `fn should_retry(&self, outcome: &ResumeOutcome) -> bool`
+  - [x] Use async_trait for async trait methods
 
-- [ ] Implement StrategySelector (AC: 2, 3, 6)
-  - [ ] Create `src/resume/selector.rs`
-  - [ ] Implement `select(&self, reason: &StopReason) -> Box<dyn ResumeStrategy>`
-  - [ ] Map RateLimit -> SameSessionStrategy
-  - [ ] Map ContextExhausted -> NewSessionStrategy
-  - [ ] Map UserExit -> no strategy (skip resume)
-  - [ ] Map Completed -> no strategy (skip resume)
-  - [ ] Map Unknown -> configurable default
+- [x] Implement StrategySelector (AC: 2, 3, 6)
+  - [x] Create `src/resume/selector.rs`
+  - [x] Implement `select(&self, reason: &StopReason) -> Box<dyn ResumeStrategy>`
+  - [x] Map RateLimit -> SameSessionStrategy
+  - [x] Map ContextExhausted -> NewSessionStrategy
+  - [x] Map UserExit -> no strategy (skip resume)
+  - [x] Map Completed -> no strategy (skip resume)
+  - [x] Map Unknown -> configurable default
 
-- [ ] Define ResumeError type (AC: 1, 5)
-  - [ ] Create `src/resume/error.rs` with thiserror
-  - [ ] Define error variants: Io, SessionNotFound, CommandFailed, Timeout
-  - [ ] Include context information in errors
+- [x] Define ResumeError type (AC: 1, 5)
+  - [x] Create `src/resume/error.rs` with thiserror
+  - [x] Define error variants: Io, SessionNotFound, CommandFailed, Timeout
+  - [x] Include context information in errors
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Test ResumeContext construction
-  - [ ] Test ResumeOutcome variants
-  - [ ] Test strategy selection for RateLimit
-  - [ ] Test strategy selection for ContextExhausted
-  - [ ] Test strategy selection for UserExit
-  - [ ] Test mock strategy implementation
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Test ResumeContext construction
+  - [x] Test ResumeOutcome variants
+  - [x] Test strategy selection for RateLimit
+  - [x] Test strategy selection for ContextExhausted
+  - [x] Test strategy selection for UserExit
+  - [x] Test mock strategy implementation
 
 ## Dev Notes
 
@@ -416,19 +416,36 @@ pub enum ResumeError {
 ## File List
 
 **Files to create:**
-- `src/resume/mod.rs`
-- `src/resume/strategy.rs`
 - `src/resume/context.rs`
+- `src/resume/error.rs`
 - `src/resume/outcome.rs`
 - `src/resume/selector.rs`
-- `src/resume/error.rs`
-- `tests/resume_strategy_test.rs`
+- `src/resume/strategy.rs`
+- `tests/resume_context_outcome_test.rs`
+- `tests/resume_selector_test.rs`
+- `tests/resume_strategy_trait_test.rs`
 
 **Files to modify:**
-- `Cargo.toml` (add async-trait if not present)
-- `src/lib.rs` (add resume module)
+- `Cargo.toml`
+- `src/resume/mod.rs`
+- `_bmad-output/implementation-artifacts/3-1-resume-strategy-trait.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-02-05: Story created and marked ready-for-dev
+- 2026-02-05: Implemented resume strategy scaffolding, selector, and tests
+
+## Dev Agent Record
+
+### Implementation Plan
+- Implement ResumeContext, ResumeOutcome, ResumeError, and ResumeStrategy with builder helpers
+- Add StrategySelector with unknown-default configuration and placeholder strategies
+- Add unit tests for context/outcome helpers and selector routing
+
+### Debug Log
+- None
+
+### Completion Notes
+- Added resume module scaffolding, selector defaults, and outcome helpers
+- Added tests for selection routing and async strategy execution

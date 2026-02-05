@@ -54,7 +54,7 @@ development_status:
 
   # Epic 3: Automatic Session Resumption
   epic-3: in-progress
-  3-1-resume-strategy-trait: ready-for-dev
+  3-1-resume-strategy-trait: done
   3-2-same-session-resume-strategy: ready-for-dev
   3-3-new-session-resume-strategy: ready-for-dev
   3-4-session-backup-before-new-session: ready-for-dev
