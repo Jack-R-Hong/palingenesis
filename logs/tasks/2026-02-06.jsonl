@@ -20,3 +20,4 @@
 {"task":"create-story-6-4","epic":"6","story":"6-4-control-api-endpoints","end_time":"2026-02-06T02:19:24+08:00","status":"completed","commit":"7b30df5"}
 {"timestamp":"2026-02-06T02:20:51+08:00","task":"bmad-bmm-dev-story-6-4","action":"start","epic":"6","story":"6-4-control-api-endpoints"}
 {"timestamp":"2026-02-06T02:30:21+08:00","task":"bmad-bmm-dev-story-6-4","action":"end","epic":"6","story":"6-4-control-api-endpoints","result":"success"}
+{"task_id":"review-6-4","story":"6-4-control-api-endpoints","started_at":"2026-02-06T02:31:23+08:00","status":"started","agent":"sisyphus-junior"}

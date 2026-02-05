@@ -5,11 +5,21 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 use serde::Serialize;
+use uuid::Uuid;
 
 use crate::daemon::state::DaemonState;
 use crate::ipc::socket::DaemonStateAccess;
 
-/// Basic control response payload for success-only endpoints.
+/// Error messages returned by DaemonState methods.
+/// Using constants prevents silent failures from string comparison mismatches.
+mod error_messages {
+    pub const ALREADY_PAUSED: &str = "Daemon already paused";
+    pub const NOT_PAUSED: &str = "Daemon is not paused";
+}
+
+/// Success response payload for control endpoints (ARCH23 compliant).
+///
+/// Returns `{ "success": true }` for successful pause/resume operations.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ControlResponse {
     success: bool,
@@ -21,16 +31,18 @@ impl ControlResponse {
     }
 }
 
-/// Control response payload that includes a session identifier.
+/// Success response payload for new-session endpoint (ARCH23 compliant).
+///
+/// Returns `{ "success": true, "session_id": "..." }` with a UUID identifier.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ControlResponseWithId {
     success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    session_id: Option<String>,
+    /// Unique session identifier (UUID v4 format).
+    session_id: String,
 }
 
 impl ControlResponseWithId {
-    fn success(session_id: Option<String>) -> Self {
+    fn success(session_id: String) -> Self {
         Self {
             success: true,
             session_id,
@@ -38,14 +50,20 @@ impl ControlResponseWithId {
     }
 }
 
-/// Error detail payload for control endpoint failures.
+/// Error detail payload for control endpoint failures (ARCH23 compliant).
+///
+/// Contains machine-readable `code` and human-readable `message`.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ErrorDetail {
+    /// Machine-readable error code (e.g., "ALREADY_PAUSED", "NOT_PAUSED").
     code: String,
+    /// Human-readable error message.
     message: String,
 }
 
-/// Error response envelope for control endpoints.
+/// Error response envelope for control endpoints (ARCH23 compliant).
+///
+/// Returns `{ "success": false, "error": { "code": "...", "message": "..." } }`.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ControlErrorResponse {
     success: bool,
@@ -78,7 +96,7 @@ pub async fn pause_handler(
 ) -> impl IntoResponse {
     match state.pause() {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
-        Err(message) if message == "Daemon already paused" => {
+        Err(message) if message == error_messages::ALREADY_PAUSED => {
             error_response("ALREADY_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
         }
         Err(message) => {
@@ -94,7 +112,7 @@ pub async fn resume_handler(
 ) -> impl IntoResponse {
     match state.resume() {
         Ok(()) => (StatusCode::OK, Json(ControlResponse::success())).into_response(),
-        Err(message) if message == "Daemon is not paused" => {
+        Err(message) if message == error_messages::NOT_PAUSED => {
             error_response("NOT_PAUSED", &message, StatusCode::BAD_REQUEST).into_response()
         }
         Err(message) => {
@@ -110,11 +128,8 @@ pub async fn new_session_handler(
 ) -> impl IntoResponse {
     match state.new_session() {
         Ok(()) => {
-            let status = state.get_status();
-            let session_id = status
-                .current_session
-                .unwrap_or_else(|| status.saves_count.to_string());
-            let response = ControlResponseWithId::success(Some(session_id));
+            let session_id = Uuid::new_v4().to_string();
+            let response = ControlResponseWithId::success(session_id);
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(message) => {
