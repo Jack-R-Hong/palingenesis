@@ -53,16 +53,16 @@ development_status:
   epic-2-retrospective: done
 
   # Epic 3: Automatic Session Resumption
-  epic-3: backlog
-  3-1-resume-strategy-trait: backlog
-  3-2-same-session-resume-strategy: backlog
-  3-3-new-session-resume-strategy: backlog
-  3-4-session-backup-before-new-session: backlog
-  3-5-exponential-backoff-implementation: backlog
-  3-6-audit-trail-logging: backlog
-  3-7-pause-command-implementation: backlog
-  3-8-resume-command-implementation: backlog
-  3-9-force-new-session-command: backlog
+  epic-3: in-progress
+  3-1-resume-strategy-trait: ready-for-dev
+  3-2-same-session-resume-strategy: ready-for-dev
+  3-3-new-session-resume-strategy: ready-for-dev
+  3-4-session-backup-before-new-session: ready-for-dev
+  3-5-exponential-backoff-implementation: ready-for-dev
+  3-6-audit-trail-logging: ready-for-dev
+  3-7-pause-command-implementation: ready-for-dev
+  3-8-resume-command-implementation: ready-for-dev
+  3-9-force-new-session-command: ready-for-dev
   epic-3-retrospective: optional
 
   # Epic 4: Configuration Management
