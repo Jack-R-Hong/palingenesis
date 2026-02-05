@@ -207,6 +207,17 @@ fn validate_bot_config(
                 message: "Discord public key cannot be empty".to_string(),
                 suggestion: None,
             });
+        } else if trimmed.len() != 64 {
+            errors.push(ValidationError {
+                field: "bot.discord_public_key".to_string(),
+                message: format!(
+                    "Discord public key must be 64 hex characters (got {})",
+                    trimmed.len()
+                ),
+                suggestion: Some(
+                    "Ed25519 public keys are 32 bytes = 64 hex characters".to_string(),
+                ),
+            });
         } else if hex::decode(trimmed).is_err() {
             errors.push(ValidationError {
                 field: "bot.discord_public_key".to_string(),
@@ -399,5 +410,17 @@ mod tests {
             .errors
             .iter()
             .any(|err| err.field == "bot.discord_public_key"));
+    }
+
+    #[test]
+    fn test_validate_config_reports_invalid_discord_key_length() {
+        let mut config = Config::default();
+        config.bot.enabled = true;
+        config.bot.discord_public_key = Some("abcd1234".to_string());
+        let result = validate_config(&config);
+        assert!(result
+            .errors
+            .iter()
+            .any(|err| err.field == "bot.discord_public_key" && err.message.contains("64")));
     }
 }

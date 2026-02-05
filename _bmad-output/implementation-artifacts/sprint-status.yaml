@@ -93,7 +93,7 @@ development_status:
   6-3-status-api-endpoint: done
   6-4-control-api-endpoints: done
   6-5-events-sse-stream: done
-  6-6-discord-slack-bot-commands: review
+  6-6-discord-slack-bot-commands: done
   epic-6-retrospective: optional
 
   # Epic 7: Observability & Metrics

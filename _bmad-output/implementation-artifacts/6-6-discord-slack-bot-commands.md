@@ -6,7 +6,7 @@
 |-------|-------|
 | Story ID | 6-6 |
 | Epic | Epic 6: Remote Control & External API |
-| Status | review |
+| Status | done |
 | Priority | Medium |
 | Estimate | 5 story points |
 
@@ -307,6 +307,19 @@ Both approaches:
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 - logs/tasks/2026-02-06.jsonl
 
+## Code Review Notes (2026-02-06)
+
+### Issues Found: 4
+1. **SECURITY (HIGH)**: Empty authorized_users allowed all users even when allow_all_users=false - FIXED
+2. **VALIDATION (MEDIUM)**: Discord public key length not validated (should be 64 hex chars) - FIXED
+3. **DOCUMENTATION (LOW)**: Help command missing -t shorthand for --tail - FIXED
+4. **BUG (MEDIUM)**: Log truncation could break code block formatting - FIXED
+
+### Issues Not Fixed (Design/Out of Scope): 2
+5. **TEST COVERAGE (LOW)**: Missing tests for PING, help, logs, new-session commands
+6. **DESIGN (LOW)**: Slack always uses ephemeral responses (story didn't specify)
+
 ## Change Log
+- 2026-02-06: Code review completed with 4 issues fixed
 - 2026-02-06: Added bot webhook handling, authorization, config schema updates, and tests.
 - 2026-02-06: Documented sprint status and task log updates in file list.

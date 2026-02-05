@@ -17,7 +17,9 @@ impl BotAuth {
             .map(|user| user.user_id.clone())
             .collect();
 
-        let allow_all = config.allow_all_users || allowed_users.is_empty();
+        // Only allow all users when explicitly configured via allow_all_users flag.
+        // Empty authorized_users list with allow_all_users=false means deny all.
+        let allow_all = config.allow_all_users;
 
         Self {
             allow_all,
@@ -87,5 +89,20 @@ mod tests {
 
         let auth = BotAuth::for_platform(&config, BotPlatform::Discord);
         assert!(auth.is_authorized("any"));
+    }
+
+    #[test]
+    fn empty_authorized_list_denies_when_allow_all_false() {
+        let config = BotConfig {
+            enabled: true,
+            allow_all_users: false,
+            discord_application_id: None,
+            discord_public_key: None,
+            slack_signing_secret: None,
+            authorized_users: Vec::new(),
+        };
+
+        let auth = BotAuth::for_platform(&config, BotPlatform::Discord);
+        assert!(!auth.is_authorized("any"));
     }
 }

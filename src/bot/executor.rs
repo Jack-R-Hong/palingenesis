@@ -110,7 +110,8 @@ impl CommandExecutor {
                 if lines.is_empty() {
                     return BotCommandResult::success("No log entries found");
                 }
-                let body = format!("```\n{}\n```", lines.join("\n"));
+                let content = truncate_log_lines(&lines, 1700);
+                let body = format!("```\n{content}\n```");
                 BotCommandResult::success(format!("Last {tail} log lines")).with_body(body)
             }
             Err(err) => BotCommandResult::error(format!("Failed to read logs: {err}")),
@@ -118,7 +119,13 @@ impl CommandExecutor {
     }
 
     fn execute_help(&self) -> BotCommandResult {
-        let body = "Available commands:\n- /palin status\n- /palin pause\n- /palin resume\n- /palin logs --tail 5\n- /palin new-session";
+        let body = "Available commands:\n\
+            - /palin status\n\
+            - /palin pause\n\
+            - /palin resume\n\
+            - /palin logs [--tail|-t N]\n\
+            - /palin new-session\n\
+            - /palin help";
         BotCommandResult::success("palingenesis bot help").with_body(body)
     }
 }
@@ -133,6 +140,26 @@ fn read_log_tail(log_path: &std::path::Path, tail: usize) -> anyhow::Result<Vec<
         0
     };
     Ok(lines[start..].to_vec())
+}
+
+fn truncate_log_lines(lines: &[String], max_chars: usize) -> String {
+    let mut result = String::new();
+    for line in lines {
+        if result.len() + line.len() + 1 > max_chars {
+            if result.is_empty() {
+                result.push_str(&line[..max_chars.saturating_sub(3).min(line.len())]);
+                result.push_str("...");
+            } else {
+                result.push_str("\n...(truncated)");
+            }
+            break;
+        }
+        if !result.is_empty() {
+            result.push('\n');
+        }
+        result.push_str(line);
+    }
+    result
 }
 
 fn format_duration(seconds: u64) -> String {
