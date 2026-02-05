@@ -1,6 +1,6 @@
 # Story 6.1: HTTP API Server Setup
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
