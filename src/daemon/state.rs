@@ -83,7 +83,7 @@ impl Default for DaemonState {
 
 impl DaemonStateAccess for DaemonState {
     fn get_status(&self) -> DaemonStatus {
-        let time_saved_seconds = StateStore::new().load().stats.time_saved_seconds;
+        let stats = StateStore::new().load().stats;
         DaemonStatus {
             state: if self.paused.load(Ordering::SeqCst) {
                 "paused".to_string()
@@ -92,10 +92,10 @@ impl DaemonStateAccess for DaemonState {
             },
             uptime_secs: self.uptime().as_secs(),
             current_session: None,
-            saves_count: self.sessions_count.load(Ordering::SeqCst),
+            saves_count: stats.saves_count,
             total_resumes: self.resumes_count.load(Ordering::SeqCst),
-            time_saved_seconds,
-            time_saved_human: Some(format_time_saved(time_saved_seconds)),
+            time_saved_seconds: stats.time_saved_seconds,
+            time_saved_human: Some(format_time_saved(stats.time_saved_seconds)),
         }
     }
 
