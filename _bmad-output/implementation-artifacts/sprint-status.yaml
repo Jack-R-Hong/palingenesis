@@ -74,7 +74,7 @@ development_status:
   4-5-config-edit-command: done
   4-6-hot-reload-via-sighup: done
   4-7-auto-detect-ai-assistants: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # Epic 5: Event Notifications
   epic-5: backlog
