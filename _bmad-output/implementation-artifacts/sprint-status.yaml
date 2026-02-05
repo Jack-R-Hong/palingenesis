@@ -47,7 +47,7 @@ development_status:
   1-3-platform-specific-path-resolution: done
   1-4-state-persistence-layer: done
   1-5-pid-file-management: done
-  1-6-unix-socket-ipc-server: backlog
+  1-6-unix-socket-ipc-server: ready-for-dev
   1-7-unix-socket-ipc-client: backlog
   1-8-daemon-start-command: backlog
   1-9-daemon-stop-command: backlog
