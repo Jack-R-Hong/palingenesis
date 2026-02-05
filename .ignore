@@ -1,0 +1,6 @@
+# OpenCode .ignore file
+# Use !pattern to INCLUDE files normally excluded by .gitignore
+# See: https://opencode.ai/docs/tools/#ignore-patterns
+
+# Example: uncomment to include target/ in searches
+# !target/

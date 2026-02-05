@@ -77,14 +77,14 @@ development_status:
   epic-4-retrospective: done
 
   # Epic 5: Event Notifications
-  epic-5: backlog
-  5-1-notification-dispatcher: backlog
-  5-2-webhook-notifications: backlog
-  5-3-ntfy-sh-integration: backlog
-  5-4-discord-webhook-integration: backlog
-  5-5-slack-webhook-integration: backlog
-  5-6-notification-events-definition: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-notification-dispatcher: done
+  5-2-webhook-notifications: done
+  5-3-ntfy-sh-integration: done
+  5-4-discord-webhook-integration: done
+  5-5-slack-webhook-integration: done
+  5-6-notification-events-definition: done
+  epic-5-retrospective: done
 
   # Epic 6: Remote Control & External API
   epic-6: backlog
