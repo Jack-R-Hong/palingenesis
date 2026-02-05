@@ -240,6 +240,7 @@ enabled = false
 # protocol = "http"  # http or grpc
 # sampling_ratio = 1.0
 # traces = true
+# logs = false
 # metrics = true
 # metrics_enabled = true
 "#
