@@ -1,10 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::encoding::text::encode;
+use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::registry::Registry;
+use tracing::warn;
 
 use crate::daemon::state::DaemonState;
 use crate::ipc::socket::DaemonStateAccess;
@@ -83,7 +84,10 @@ impl Metrics {
             "paused" => 2,
             "waiting" => 3,
             "resuming" => 4,
-            _ => 0,
+            unknown => {
+                warn!(state = %unknown, "Unknown daemon state encountered, reporting as 0");
+                0
+            }
         };
         self.daemon_state.set(state_value);
         self.uptime_seconds.set(state.uptime().as_secs() as i64);
@@ -110,6 +114,12 @@ impl Metrics {
         self.build_info
             .get_or_create(&BuildInfoLabels { version, commit })
             .set(1);
+    }
+}
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

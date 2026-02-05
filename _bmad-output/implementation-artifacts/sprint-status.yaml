@@ -98,7 +98,7 @@ development_status:
 
   # Epic 7: Observability & Metrics
   epic-7: in-progress
-  7-1-prometheus-metrics-endpoint: review
+  7-1-prometheus-metrics-endpoint: done
   7-2-core-metrics-implementation: backlog
   7-3-time-saved-metric: backlog
   7-4-saves-count-metric: backlog

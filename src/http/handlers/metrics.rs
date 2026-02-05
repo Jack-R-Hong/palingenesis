@@ -35,7 +35,7 @@ pub async fn metrics_handler(State(state): State<AppState>) -> Response {
 fn metrics_enabled(daemon_state: &DaemonState) -> bool {
     daemon_state
         .otel_config()
-        .map_or(true, |otel| otel.metrics_enabled)
+        .is_none_or(|otel| otel.metrics_enabled)
 }
 
 #[cfg(test)]
