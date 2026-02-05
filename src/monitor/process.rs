@@ -8,7 +8,6 @@ use tokio::time::MissedTickBehavior;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
-use crate::monitor::events::{MonitorEvent, MonitorEventReceiver, MonitorEventSender};
 
 const DEFAULT_POLL_INTERVAL_MS: u64 = 1000;
 const OPENCODE_PROCESS_NAME: &str = "opencode";
@@ -38,6 +37,9 @@ pub enum ProcessEvent {
         exit_code: Option<i32>,
     },
 }
+
+pub type ProcessEventSender = mpsc::Sender<ProcessEvent>;
+pub type ProcessEventReceiver = mpsc::Receiver<ProcessEvent>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProcessError {
@@ -99,7 +101,7 @@ impl ProcessMonitor {
     }
 
     /// Run the process monitor, returning a receiver for monitor events.
-    pub async fn run(self, cancel: CancellationToken) -> Result<MonitorEventReceiver, ProcessError> {
+    pub async fn run(self, cancel: CancellationToken) -> Result<ProcessEventReceiver, ProcessError> {
         let (tx, rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
         let mut state = ProcessMonitorState::new(self.poll_interval, self.enumerator);
 
@@ -132,7 +134,7 @@ impl ProcessMonitorState {
         }
     }
 
-    async fn run_loop(&mut self, tx: MonitorEventSender, cancel: CancellationToken) {
+    async fn run_loop(&mut self, tx: ProcessEventSender, cancel: CancellationToken) {
         if let Err(err) = self.emit_existing_processes(&tx).await {
             warn!(error = %err, "Failed to enumerate existing processes");
         }
@@ -156,20 +158,19 @@ impl ProcessMonitorState {
         }
     }
 
-    async fn emit_existing_processes(&mut self, tx: &MonitorEventSender) -> Result<(), ProcessError> {
+    async fn emit_existing_processes(&mut self, tx: &ProcessEventSender) -> Result<(), ProcessError> {
         let initial = self.enumerator.list_opencode_processes()?;
         for process in initial {
             self.tracked_processes.insert(process.pid, process.clone());
             info!(pid = process.pid, "Detected existing opencode process");
-            let event = MonitorEvent::from(ProcessEvent::ProcessStarted(process));
-            let _ = tx.send(event).await;
+            let _ = tx.send(ProcessEvent::ProcessStarted(process)).await;
         }
         Ok(())
     }
 
     async fn poll_once(
         &mut self,
-        tx: &MonitorEventSender,
+        tx: &ProcessEventSender,
         cancel: &CancellationToken,
     ) -> Result<(), ProcessError> {
         if cancel.is_cancelled() {
@@ -187,8 +188,7 @@ impl ProcessMonitorState {
                 if cancel.is_cancelled() {
                     return Ok(());
                 }
-                let event = MonitorEvent::from(ProcessEvent::ProcessStarted(process.clone()));
-                let _ = tx.send(event).await;
+                let _ = tx.send(ProcessEvent::ProcessStarted(process.clone())).await;
             }
         }
 
@@ -206,8 +206,9 @@ impl ProcessMonitorState {
                 if cancel.is_cancelled() {
                     return Ok(());
                 }
-                let event = MonitorEvent::from(ProcessEvent::ProcessStopped { info, exit_code });
-                let _ = tx.send(event).await;
+                let _ = tx
+                    .send(ProcessEvent::ProcessStopped { info, exit_code })
+                    .await;
             }
         }
 
@@ -430,13 +431,13 @@ mod tests {
             .await
             .expect("event")
             .expect("event value");
-        assert!(matches!(event, MonitorEvent::ProcessStarted { .. }));
+        assert!(matches!(event, ProcessEvent::ProcessStarted(_)));
 
         let event = timeout(Duration::from_millis(50), rx.recv())
             .await
             .expect("event")
             .expect("event value");
-        assert!(matches!(event, MonitorEvent::ProcessStarted { .. }));
+        assert!(matches!(event, ProcessEvent::ProcessStarted(_)));
 
         cancel.cancel();
     }
@@ -467,7 +468,7 @@ mod tests {
 
         assert!(matches!(
             event,
-            MonitorEvent::ProcessStopped {
+            ProcessEvent::ProcessStopped {
                 exit_code: Some(0),
                 ..
             }
@@ -494,7 +495,7 @@ mod tests {
             .await
             .expect("event")
             .expect("event value");
-        assert!(matches!(event, MonitorEvent::ProcessStarted { .. }));
+        assert!(matches!(event, ProcessEvent::ProcessStarted(_)));
 
         cancel.cancel();
     }

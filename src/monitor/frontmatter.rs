@@ -89,15 +89,23 @@ impl SessionParser {
                         let previous = self.sessions.insert(path, session.clone());
                         Some(MonitorEvent::SessionChanged { session, previous })
                     }
-                    Err(err) => Some(MonitorEvent::Error(err.to_string())),
+                    Err(err) => Some(MonitorEvent::Error {
+                        source: "session_parser".to_string(),
+                        message: err.to_string(),
+                        recoverable: true,
+                    }),
                 }
             }
             WatchEvent::FileDeleted(path) => {
                 self.sessions.remove(&path);
-                Some(MonitorEvent::FileDeleted(path))
+                None
             }
-            WatchEvent::DirectoryCreated(path) => Some(MonitorEvent::DirectoryCreated(path)),
-            WatchEvent::Error(message) => Some(MonitorEvent::Error(message)),
+            WatchEvent::DirectoryCreated(_) => None,
+            WatchEvent::Error(message) => Some(MonitorEvent::Error {
+                source: "watcher".to_string(),
+                message,
+                recoverable: true,
+            }),
         }
     }
 }
