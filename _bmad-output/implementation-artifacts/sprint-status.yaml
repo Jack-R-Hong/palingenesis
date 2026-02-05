@@ -42,8 +42,8 @@ development_status:
   epic-1-retrospective: done
 
   # Epic 2: Session Detection & Classification
-  epic-2: backlog
-  2-1-file-system-watcher-setup: backlog
+  epic-2: in-progress
+  2-1-file-system-watcher-setup: ready-for-dev
   2-2-session-file-parser-frontmatter-extraction: backlog
   2-3-process-detection-opencode-start-stop: backlog
   2-4-stop-reason-classification-rate-limit: backlog
