@@ -6,10 +6,11 @@ use chrono::Utc;
 use tokio::fs;
 use tracing::{debug, info, warn};
 
+use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
 use crate::resume::backup::{BackupConfig, BackupHandler, SessionBackup};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
-use crate::state::{CurrentSession, StateStore};
+use crate::state::{AuditLogger, CurrentSession, StateStore};
 
 /// Configuration for new-session resume.
 #[derive(Debug, Clone)]
@@ -292,11 +293,26 @@ impl NewSessionStrategy {
         Ok(())
     }
 
+    fn audit_logger() -> Option<AuditLogger> {
+        match Paths::ensure_state_dir() {
+            Ok(state_dir) => Some(AuditLogger::new(&state_dir)),
+            Err(err) => {
+                warn!(error = %err, "Failed to initialize audit logger");
+                None
+            }
+        }
+    }
+
 }
 
 #[async_trait]
 impl ResumeStrategy for NewSessionStrategy {
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
+        let audit_logger = Self::audit_logger();
+        if let Some(logger) = &audit_logger {
+            let _ = logger.log_resume_started(&ctx.session_path, &format!("{:?}", ctx.stop_reason));
+        }
+
         let session_dir = ctx.session_path.parent().ok_or_else(|| {
             ResumeError::SessionNotFound {
                 path: ctx.session_path.clone(),
@@ -307,6 +323,9 @@ impl ResumeStrategy for NewSessionStrategy {
             match self.backup.backup(&ctx.session_path).await {
                 Ok(backup_path) => {
                     info!(backup = %backup_path.display(), "Session backed up");
+                    if let Some(logger) = &audit_logger {
+                        let _ = logger.log_session_backed_up(&ctx.session_path, &backup_path);
+                    }
                 }
                 Err(err) => {
                     warn!("Failed to backup session: {}", err);
@@ -339,7 +358,15 @@ impl ResumeStrategy for NewSessionStrategy {
         );
 
         let prompt = self.generate_prompt(&next_step, ctx);
-        let new_session_path = self.creator.create(&prompt, session_dir).await?;
+        let new_session_path = match self.creator.create(&prompt, session_dir).await {
+            Ok(path) => path,
+            Err(err) => {
+                if let Some(logger) = &audit_logger {
+                    let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
+                }
+                return Err(err);
+            }
+        };
 
         info!(
             from = %ctx.session_path.display(),
@@ -347,7 +374,23 @@ impl ResumeStrategy for NewSessionStrategy {
             "Audit: new session transition"
         );
 
-        self.update_state_on_resume(ctx, new_session_path.clone(), &next_step)?;
+        if let Some(logger) = &audit_logger {
+            let _ = logger.log_session_created(&new_session_path);
+        }
+
+        if let Err(err) = self.update_state_on_resume(ctx, new_session_path.clone(), &next_step) {
+            if let Some(logger) = &audit_logger {
+                let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
+            }
+            return Err(err);
+        }
+
+        if let Some(logger) = &audit_logger {
+            let _ = logger.log_resume_completed(
+                &ctx.session_path,
+                &format!("Started new session from step {}", next_step.step_number),
+            );
+        }
 
         Ok(ResumeOutcome::success(
             new_session_path,

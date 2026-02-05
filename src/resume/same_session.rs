@@ -6,10 +6,11 @@ use chrono::Utc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
+use crate::config::paths::Paths;
 use crate::monitor::session::{Session, StepValue};
 use crate::resume::backoff::{Backoff, BackoffConfig};
 use crate::resume::{ResumeContext, ResumeError, ResumeOutcome, ResumeStrategy};
-use crate::state::{CurrentSession, StateStore};
+use crate::state::{AuditLogger, CurrentSession, StateStore};
 
 /// Configuration for same-session resume.
 #[derive(Debug, Clone)]
@@ -195,17 +196,38 @@ impl SameSessionStrategy {
         }
     }
 
+    fn audit_logger() -> Option<AuditLogger> {
+        match Paths::ensure_state_dir() {
+            Ok(state_dir) => Some(AuditLogger::new(&state_dir)),
+            Err(err) => {
+                warn!(error = %err, "Failed to initialize audit logger");
+                None
+            }
+        }
+    }
+
 }
 
 #[async_trait]
 impl ResumeStrategy for SameSessionStrategy {
     async fn execute(&self, ctx: &ResumeContext) -> Result<ResumeOutcome, ResumeError> {
+        let audit_logger = Self::audit_logger();
+        if let Some(logger) = &audit_logger {
+            let _ = logger.log_resume_started(&ctx.session_path, &format!("{:?}", ctx.stop_reason));
+        }
+
         if ctx.attempt_number > self.config.max_retries {
             warn!(
                 attempts = ctx.attempt_number,
                 max_retries = self.config.max_retries,
                 "Retry limit exceeded"
             );
+            if let Some(logger) = &audit_logger {
+                let _ = logger.log_resume_failed(
+                    &ctx.session_path,
+                    &format!("Retry limit exceeded after {} attempts", ctx.attempt_number),
+                );
+            }
             return Ok(ResumeOutcome::failure(
                 format!(
                     "Retry limit exceeded after {} attempts",
@@ -223,6 +245,12 @@ impl ResumeStrategy for SameSessionStrategy {
         match self.trigger.trigger(ctx).await {
             Ok(()) => {
                 self.update_state_on_resume(ctx)?;
+                if let Some(logger) = &audit_logger {
+                    let _ = logger.log_resume_completed(
+                        &ctx.session_path,
+                        "Resumed same session after rate limit",
+                    );
+                }
                 Ok(ResumeOutcome::success(
                     ctx.session_path.clone(),
                     "Resumed same session after rate limit",
@@ -230,6 +258,9 @@ impl ResumeStrategy for SameSessionStrategy {
             }
             Err(err) => {
                 warn!(error = %err, "Resume trigger failed");
+                if let Some(logger) = &audit_logger {
+                    let _ = logger.log_resume_failed(&ctx.session_path, &err.to_string());
+                }
                 let retryable = ctx.attempt_number < self.config.max_retries;
                 if retryable {
                     let next_delay = self.backoff_delay(ctx.attempt_number + 1);
