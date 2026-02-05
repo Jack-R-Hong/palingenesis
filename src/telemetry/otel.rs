@@ -2,6 +2,9 @@
 use std::sync::Once;
 
 #[cfg(feature = "otel")]
+use opentelemetry_otlp::WithExportConfig;
+
+#[cfg(feature = "otel")]
 use tracing::info;
 use tracing::warn;
 
@@ -103,7 +106,7 @@ pub fn build_otel_layer(config: &OtelConfig) -> Option<OtelLayer> {
     {
         let _ = set_error_handler();
         opentelemetry::global::set_text_map_propagator(
-            opentelemetry::propagation::TraceContextPropagator::new(),
+            opentelemetry_sdk::propagation::TraceContextPropagator::new(),
         );
 
         let exporter = match protocol {

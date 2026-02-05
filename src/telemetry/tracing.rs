@@ -132,9 +132,22 @@ pub fn init_tracing(
         None
     };
 
+    #[cfg(feature = "otel")]
     let otel_layer = otel_config.and_then(otel::build_otel_layer);
+    #[cfg(feature = "otel")]
     let otel_enabled = otel_layer.is_some();
 
+    #[cfg(not(feature = "otel"))]
+    let otel_enabled = {
+        if let Some(otel_config) = otel_config {
+            if otel_config.enabled && otel_config.traces {
+                tracing::warn!("OpenTelemetry feature not enabled; rebuild with --features otel");
+            }
+        }
+        false
+    };
+
+    #[cfg(feature = "otel")]
     let default_guard = match (config.log_to_stderr, file.as_ref(), otel_layer) {
         (true, Some(file_ref), otel_layer) => {
             let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
@@ -232,6 +245,100 @@ pub fn init_tracing(
         (false, None, otel_layer) => tracing_subscriber::registry()
             .with(env_filter)
             .with(otel_layer)
+            .set_default(),
+    };
+
+    #[cfg(not(feature = "otel"))]
+    let default_guard = match (config.log_to_stderr, file.as_ref()) {
+        (true, Some(file_ref)) => {
+            let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
+            if config.json_format {
+                let stderr_layer = tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_writer(std::io::stderr)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                let file_layer = tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_writer(file_writer)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(stderr_layer)
+                    .with(file_layer)
+                    .set_default()
+            } else {
+                let stderr_layer = tracing_subscriber::fmt::layer()
+                    .with_writer(std::io::stderr)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                let file_layer = tracing_subscriber::fmt::layer()
+                    .with_writer(file_writer)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(stderr_layer)
+                    .with(file_layer)
+                    .set_default()
+            }
+        }
+        (true, None) => {
+            if config.json_format {
+                let layer = tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_writer(std::io::stderr)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(layer)
+                    .set_default()
+            } else {
+                let layer = tracing_subscriber::fmt::layer()
+                    .with_writer(std::io::stderr)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(layer)
+                    .set_default()
+            }
+        }
+        (false, Some(file_ref)) => {
+            let file_writer = FileMakeWriter::new(Arc::clone(file_ref));
+            if config.json_format {
+                let layer = tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_writer(file_writer)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(layer)
+                    .set_default()
+            } else {
+                let layer = tracing_subscriber::fmt::layer()
+                    .with_writer(file_writer)
+                    .with_target(true)
+                    .with_level(true)
+                    .with_timer(tracing_subscriber::fmt::time::SystemTime);
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(layer)
+                    .set_default()
+            }
+        }
+        (false, None) => tracing_subscriber::registry()
+            .with(env_filter)
             .set_default(),
     };
 
