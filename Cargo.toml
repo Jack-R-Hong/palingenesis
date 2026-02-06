@@ -28,6 +28,10 @@ toml = "0.9.11"
 regex = "1.11"
 hex = "0.4"
 serde_urlencoded = "0.7"
+schemars = "0.8"
+
+# MCP Protocol
+rmcp = { version = "0.8", features = ["server", "transport-io"] }
 
 # File watching
 notify = "8.2.0"
