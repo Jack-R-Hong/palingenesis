@@ -76,8 +76,18 @@ mod tests {
         }
     }
 
+    fn enable_metrics_for_test() -> tempfile::TempDir {
+        let temp = tempdir().unwrap();
+        let config_path = temp.path().join("config.toml");
+        std::fs::write(&config_path, "").unwrap();
+        set_env_var("PALINGENESIS_CONFIG", &config_path);
+        temp
+    }
+
     #[tokio::test]
     async fn test_metrics_response_content_type() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = enable_metrics_for_test();
         let state = Arc::new(DaemonState::new());
         let response = test_router(state)
             .oneshot(
@@ -97,10 +107,14 @@ mod tests {
             .to_str()
             .expect("content type string");
         assert_eq!(content_type, METRICS_CONTENT_TYPE);
+        remove_env_var("PALINGENESIS_CONFIG");
+        drop(temp);
     }
 
     #[tokio::test]
     async fn test_metrics_output_contains_expected_names() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = enable_metrics_for_test();
         let state = Arc::new(DaemonState::new());
         let response = test_router(state)
             .oneshot(
@@ -134,6 +148,8 @@ mod tests {
         assert!(text.contains("palingenesis_wait_duration_seconds"));
         assert!(text.contains("palingenesis_time_saved_seconds_total"));
         assert!(text.contains("palingenesis_time_saved_per_resume_seconds"));
+        remove_env_var("PALINGENESIS_CONFIG");
+        drop(temp);
     }
 
     #[tokio::test]
@@ -161,6 +177,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_endpoint_handles_burst_quickly() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let temp = enable_metrics_for_test();
         let state = Arc::new(DaemonState::new());
         let router = test_router(state);
         let start = Instant::now();
@@ -179,5 +197,7 @@ mod tests {
         }
         let elapsed = start.elapsed();
         assert!(elapsed.as_secs_f64() < 5.0, "elapsed: {:?}", elapsed);
+        remove_env_var("PALINGENESIS_CONFIG");
+        drop(temp);
     }
 }
