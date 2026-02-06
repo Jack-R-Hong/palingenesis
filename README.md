@@ -48,6 +48,34 @@ palingenesis logs --follow
 palingenesis daemon stop
 ```
 
+## OpenCode MCP Integration
+
+palingenesis can run as a local MCP server for OpenCode.
+
+### Setup
+
+1. Generate the OpenCode MCP configuration snippet:
+   ```bash
+   palingenesis mcp config
+   ```
+
+2. Add the output to your OpenCode config file:
+   - Linux/macOS: `~/.config/opencode/opencode.json`
+
+Example configuration:
+
+```json
+{
+  "mcpServers": {
+    "palingenesis": {
+      "type": "local",
+      "command": ["palingenesis", "mcp", "serve"],
+      "enabled": true
+    }
+  }
+}
+```
+
 ## Configuration
 
 Configuration file location:

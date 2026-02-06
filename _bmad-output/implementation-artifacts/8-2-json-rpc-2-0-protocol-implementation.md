@@ -1,6 +1,6 @@
 # Story 8.2: JSON-RPC 2.0 Protocol Implementation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,43 +37,43 @@ So that any MCP client can communicate reliably.
 
 ## Tasks / Subtasks
 
-- [ ] Create protocol types module (AC: 1, 5)
-  - [ ] Define `JsonRpcRequest` struct with jsonrpc, method, params, id
-  - [ ] Define `JsonRpcResponse` struct with jsonrpc, result/error, id
-  - [ ] Define `JsonRpcError` struct with code, message, data
-  - [ ] Implement serde Serialize/Deserialize for all types
+- [x] Create protocol types module (AC: 1, 5)
+  - [x] Define `JsonRpcRequest` struct with jsonrpc, method, params, id
+  - [x] Define `JsonRpcResponse` struct with jsonrpc, result/error, id
+  - [x] Define `JsonRpcError` struct with code, message, data
+  - [x] Implement serde Serialize/Deserialize for all types
 
-- [ ] Implement JSON-RPC error codes (AC: 2)
-  - [ ] Define `ErrorCode` enum with standard codes (-32700, -32600, -32601, -32602, -32603)
-  - [ ] Add Display impl for user-friendly messages
-  - [ ] Create helper constructors: `parse_error()`, `method_not_found()`, etc.
+- [x] Implement JSON-RPC error codes (AC: 2)
+  - [x] Define `ErrorCode` enum with standard codes (-32700, -32600, -32601, -32602, -32603)
+  - [x] Add Display impl for user-friendly messages
+  - [x] Create helper constructors: `parse_error()`, `method_not_found()`, etc.
 
-- [ ] Implement request processing (AC: 1, 3)
-  - [ ] Create `process_request()` that routes to method handlers
-  - [ ] Return `Some(response)` for requests with `id`
-  - [ ] Return `None` for notifications (no `id`)
+- [x] Implement request processing (AC: 1, 3)
+  - [x] Create `process_request()` that routes to method handlers
+  - [x] Return `Some(response)` for requests with `id`
+  - [x] Return `None` for notifications (no `id`)
 
-- [ ] Implement batch request support (AC: 4)
-  - [ ] Detect batch by checking if input is JSON array
-  - [ ] Process each request in order
-  - [ ] Collect responses (excluding notifications)
-  - [ ] Return batch response as JSON array
+- [x] Implement batch request support (AC: 4)
+  - [x] Detect batch by checking if input is JSON array
+  - [x] Process each request in order
+  - [x] Collect responses (excluding notifications)
+  - [x] Return batch response as JSON array
 
-- [ ] Integrate with MCP server (AC: 1, 2, 3, 4, 5)
-  - [ ] Update `McpServer` to use protocol types
-  - [ ] Route MCP methods through protocol layer
-  - [ ] Ensure all responses include `"jsonrpc": "2.0"`
+- [x] Integrate with MCP server (AC: 1, 2, 3, 4, 5)
+  - [x] Update `McpServer` to use protocol types
+  - [x] Route MCP methods through protocol layer
+  - [x] Ensure all responses include `"jsonrpc": "2.0"`
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5)
-  - [ ] Test valid request returns result with matching id
-  - [ ] Test invalid method returns -32601 error
-  - [ ] Test notification (no id) returns no response
-  - [ ] Test batch request returns batch response
-  - [ ] Test all responses include jsonrpc: "2.0"
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5)
+  - [x] Test valid request returns result with matching id
+  - [x] Test invalid method returns -32601 error
+  - [x] Test notification (no id) returns no response
+  - [x] Test batch request returns batch response
+  - [x] Test all responses include jsonrpc: "2.0"
 
-- [ ] Add integration tests
-  - [ ] Test full request/response cycle via MCP server
-  - [ ] Test batch processing end-to-end
+- [x] Add integration tests
+  - [x] Test full request/response cycle via MCP server
+  - [x] Test batch processing end-to-end
 
 ## Dev Notes
 
@@ -348,6 +348,44 @@ From Story 8.1:
 - [JSON-RPC 2.0 Specification: https://www.jsonrpc.org/specification]
 - [rmcp crate documentation: https://docs.rs/rmcp/latest/rmcp/]
 
+## Dev Agent Record
+
+### Agent Model Used
+
+openai/gpt-5.2-codex
+
+### Implementation Plan
+
+- Add JSON-RPC 2.0 protocol module with request/response/error types and batch processing helpers.
+- Route MCP initialize/tools methods through the protocol layer and expose process entrypoint.
+- Add unit and integration tests for request/notification/batch handling and jsonrpc header.
+
+### Debug Log References
+
+- `cargo fmt`
+- `cargo clippy`
+- `cargo test`
+
+### Completion Notes List
+
+- Added JSON-RPC 2.0 protocol types, error codes, and batch processing with notification handling.
+- Routed MCP initialize/tools methods through the protocol handler with line-delimited stdio processing.
+- Added unit and integration tests covering request/response, method not found, notifications, and batches.
+
+### File List
+
+**Files to create:**
+- `src/mcp/protocol.rs`
+- `tests/mcp_jsonrpc.rs`
+
+**Files to modify:**
+- `src/mcp/mod.rs`
+- `src/mcp/server.rs`
+- `_bmad-output/implementation-artifacts/8-2-json-rpc-2-0-protocol-implementation.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `logs/tasks/2026-02-06.jsonl`
+
 ## Change Log
 
 - 2026-02-06: Story created and marked ready-for-dev
+- 2026-02-06: Implemented JSON-RPC protocol handling, routing, and tests; ran fmt/clippy/test
