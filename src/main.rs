@@ -1,5 +1,5 @@
 use clap::Parser;
-use palingenesis::cli::{Cli, Commands, ConfigAction, DaemonAction, commands};
+use palingenesis::cli::{Cli, Commands, ConfigAction, DaemonAction, McpCommands, commands};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -35,6 +35,9 @@ async fn main() -> anyhow::Result<()> {
             ConfigAction::Edit { path, no_validate } => {
                 commands::config::handle_edit(path, no_validate).await
             }
+        },
+        Some(Commands::Mcp { command }) => match command {
+            McpCommands::Serve => commands::mcp::handle_serve().await,
         },
         Some(Commands::Pause) => commands::session::handle_pause().await,
         Some(Commands::Resume) => commands::session::handle_resume().await,

@@ -12,7 +12,9 @@ use crate::daemon::signals::{DaemonSignal, listen_for_signals};
 use crate::daemon::state::DaemonState;
 use crate::http::{EventBroadcaster, HttpServer};
 use crate::ipc::socket::{DaemonStateAccess, IpcError, IpcServer};
+use crate::mcp::{McpServer, McpServerError};
 use crate::notify::events::NotificationEvent;
+use crate::opencode::{OpenCodeEvent, OpenCodeMonitor, OpenCodeProcessReceiver};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DaemonError {
@@ -111,6 +113,16 @@ impl Daemon {
                 }
                 .instrument(monitor_span),
             ));
+        }
+
+        if let Some(config) = self.state.opencode_config() {
+            if config.enabled {
+                let monitor = OpenCodeMonitor::new(&config);
+                match monitor.run(cancel.clone()).await {
+                    Ok(rx) => self.spawn_opencode_event_handler(rx, cancel.clone()),
+                    Err(err) => warn!(error = %err, "Failed to start OpenCode monitor"),
+                }
+            }
         }
 
         if let Some(config) = self.state.daemon_config() {
@@ -214,5 +226,92 @@ async fn run_auto_detection(state: Arc<DaemonState>, cancel: CancellationToken) 
 impl Default for Daemon {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub async fn run_mcp_server(state: Arc<DaemonState>) -> Result<(), McpServerError> {
+    let mut shutdown = ShutdownCoordinator::new();
+    let cancel = shutdown.cancel_token();
+
+    let signal_cancel = cancel.clone();
+    shutdown.register_task(tokio::spawn(async move {
+        let cancelled = signal_cancel.cancelled();
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                signal_cancel.cancel();
+            }
+            _ = cancelled => {}
+        }
+    }));
+
+    let server_cancel = cancel.clone();
+    let server_state = Arc::clone(&state);
+    let (result_tx, mut result_rx) = tokio::sync::oneshot::channel();
+    let mcp_span = info_span!("daemon.mcp");
+    shutdown.register_task(tokio::spawn(
+        async move {
+            let server = McpServer::new(server_state);
+            let result = server.run(server_cancel).await;
+            let _ = result_tx.send(result);
+        }
+        .instrument(mcp_span),
+    ));
+
+    tokio::select! {
+        _ = cancel.cancelled() => {}
+        result = &mut result_rx => {
+            match result {
+                Ok(Ok(())) => {
+                    cancel.cancel();
+                }
+                Ok(Err(err)) => {
+                    cancel.cancel();
+                    let _ = shutdown.shutdown().await;
+                    return Err(err);
+                }
+                Err(_) => {
+                    cancel.cancel();
+                }
+            }
+        }
+    }
+
+    match shutdown.shutdown().await {
+        ShutdownResult::Graceful => info!("MCP server shutdown completed"),
+        ShutdownResult::TimedOut { hung_tasks } => {
+            warn!(hung_tasks, "MCP server shutdown timed out")
+        }
+    }
+
+    Ok(())
+}
+
+impl Daemon {
+    fn spawn_opencode_event_handler(
+        &self,
+        mut rx: OpenCodeProcessReceiver,
+        cancel: CancellationToken,
+    ) {
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    _ = cancel.cancelled() => break,
+                    event = rx.recv() => {
+                        match event {
+                            Some(OpenCodeEvent::OpenCodeStarted(process)) => {
+                                info!(pid = process.pid, "OpenCode started");
+                            }
+                            Some(OpenCodeEvent::OpenCodeStopped { process, reason }) => {
+                                warn!(pid = process.pid, reason = ?reason, "OpenCode stopped");
+                            }
+                            Some(OpenCodeEvent::OpenCodeCrashed { process, exit_code }) => {
+                                warn!(pid = process.pid, exit_code, "OpenCode crashed");
+                            }
+                            None => break,
+                        }
+                    }
+                }
+            }
+        });
     }
 }

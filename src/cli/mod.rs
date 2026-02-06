@@ -3,4 +3,4 @@
 pub mod app;
 pub mod commands;
 
-pub use app::{Cli, Commands, ConfigAction, DaemonAction};
+pub use app::{Cli, Commands, ConfigAction, DaemonAction, McpCommands};

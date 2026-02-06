@@ -45,6 +45,11 @@ pub enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
+    /// MCP server operations
+    Mcp {
+        #[command(subcommand)]
+        command: McpCommands,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -107,6 +112,12 @@ pub enum ConfigAction {
         #[arg(long)]
         no_validate: bool,
     },
+}
+
+#[derive(clap::Subcommand, Debug)]
+pub enum McpCommands {
+    /// Start MCP server using stdio transport
+    Serve,
 }
 
 #[cfg(test)]
@@ -487,5 +498,16 @@ mod tests {
     fn test_config_requires_subcommand() {
         let result = Cli::try_parse_from(["palingenesis", "config"]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mcp_serve_command() {
+        let cli = Cli::try_parse_from(["palingenesis", "mcp", "serve"]).unwrap();
+        match cli.command {
+            Some(Commands::Mcp {
+                command: McpCommands::Serve,
+            }) => {}
+            _ => panic!("Expected Mcp Serve command"),
+        }
     }
 }
