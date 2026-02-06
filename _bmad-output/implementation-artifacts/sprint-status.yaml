@@ -135,7 +135,7 @@ development_status:
   # Epic 9: OpenCode Process Management (Growth)
   epic-9: in-progress
   9-1-opencode-process-detection: review
-  9-2-automatic-opencode-restart: backlog
-  9-3-opencode-http-api-client: backlog
-  9-4-opencode-configuration-options: backlog
+  9-2-automatic-opencode-restart: ready-for-dev
+  9-3-opencode-http-api-client: ready-for-dev
+  9-4-opencode-configuration-options: ready-for-dev
   epic-9-retrospective: optional
