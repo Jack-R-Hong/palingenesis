@@ -127,15 +127,15 @@ development_status:
   # Epic 8: MCP Server Interface (Growth)
   epic-8: in-progress
   8-1-mcp-server-stdio-transport-setup: done
-  8-2-json-rpc-2-0-protocol-implementation: ready-for-dev
+  8-2-json-rpc-2-0-protocol-implementation: review
   8-3-mcp-tool-definitions: ready-for-dev
-  8-4-opencode-local-mcp-configuration-support: ready-for-dev
+  8-4-opencode-local-mcp-configuration-support: review
   epic-8-retrospective: optional
 
   # Epic 9: OpenCode Process Management (Growth)
   epic-9: in-progress
   9-1-opencode-process-detection: done
   9-2-automatic-opencode-restart: ready-for-dev
-  9-3-opencode-http-api-client: ready-for-dev
-  9-4-opencode-configuration-options: ready-for-dev
+  9-3-opencode-http-api-client: review
+  9-4-opencode-configuration-options: review
   epic-9-retrospective: optional
