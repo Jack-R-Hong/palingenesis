@@ -142,11 +142,11 @@ impl StdioTransport {
 }
 
 impl JsonRpcHandler for McpServer {
-    fn handle(&self, method: &str, params: Option<Value>) -> Result<Value, JsonRpcError> {
+    fn handle(&self, method: &str, _params: Option<Value>) -> Result<Value, JsonRpcError> {
         match method {
             "initialize" => Ok(protocol::default_initialize_response()),
             "tools/list" => Ok(json!({"tools": []})),
-            "tools/call" => Ok(json!({"content": [], "params": params})),
+            "tools/call" => Ok(json!({"content": []})),
             _ => Err(JsonRpcError::method_not_found()),
         }
     }

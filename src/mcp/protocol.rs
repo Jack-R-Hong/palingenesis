@@ -290,4 +290,55 @@ mod tests {
         let value: Value = serde_json::from_str(&response).expect("json");
         assert_eq!(value["jsonrpc"], "2.0");
     }
+
+    #[test]
+    fn test_parse_error_on_invalid_json() {
+        let response = process_input(&TestHandler, r#"{not valid json}"#).expect("response");
+        let value: Value = serde_json::from_str(&response).expect("json");
+        assert_eq!(value["error"]["code"], -32700);
+        assert_eq!(value["id"], Value::Null);
+    }
+
+    #[test]
+    fn test_invalid_jsonrpc_version_rejected() {
+        let response = process_input(
+            &TestHandler,
+            r#"{"jsonrpc":"1.0","method":"initialize","id":1}"#,
+        )
+        .expect("response");
+        let value: Value = serde_json::from_str(&response).expect("json");
+        assert_eq!(value["error"]["code"], -32600);
+    }
+
+    #[test]
+    fn test_empty_batch_returns_invalid_request() {
+        let response = process_input(&TestHandler, r#"[]"#).expect("response");
+        let value: Value = serde_json::from_str(&response).expect("json");
+        assert_eq!(value["error"]["code"], -32600);
+    }
+
+    #[test]
+    fn test_batch_with_only_notifications_returns_none() {
+        let response = process_input(
+            &TestHandler,
+            r#"[{"jsonrpc":"2.0","method":"initialize"},{"jsonrpc":"2.0","method":"tools/list"}]"#,
+        );
+        assert!(response.is_none());
+    }
+
+    #[test]
+    fn test_empty_method_rejected() {
+        let response = process_input(&TestHandler, r#"{"jsonrpc":"2.0","method":"","id":1}"#)
+            .expect("response");
+        let value: Value = serde_json::from_str(&response).expect("json");
+        assert_eq!(value["error"]["code"], -32600);
+    }
+
+    #[test]
+    fn test_whitespace_only_method_rejected() {
+        let response = process_input(&TestHandler, r#"{"jsonrpc":"2.0","method":"   ","id":1}"#)
+            .expect("response");
+        let value: Value = serde_json::from_str(&response).expect("json");
+        assert_eq!(value["error"]["code"], -32600);
+    }
 }
