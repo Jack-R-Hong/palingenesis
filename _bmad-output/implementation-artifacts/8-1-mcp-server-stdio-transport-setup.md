@@ -1,6 +1,6 @@
 # Story 8.1: MCP Server stdio Transport Setup
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,46 +41,46 @@ So that OpenCode can communicate with me via the MCP protocol.
 
 ## Tasks / Subtasks
 
-- [ ] Add rmcp crate dependency (AC: 1)
-  - [ ] Add `rmcp = { version = "0.8", features = ["server", "transport-io"] }` to Cargo.toml
-  - [ ] Add `schemars = "0.8"` for JSON Schema generation
-  - [ ] Verify crate compiles with features
+- [x] Add rmcp crate dependency (AC: 1)
+  - [x] Add `rmcp = { version = "0.8", features = ["server", "transport-io"] }` to Cargo.toml
+  - [x] Add `schemars = "0.8"` for JSON Schema generation
+  - [x] Verify crate compiles with features
 
-- [ ] Create MCP module structure (AC: 1)
-  - [ ] Create `src/mcp/mod.rs` with module declarations
-  - [ ] Create `src/mcp/server.rs` for MCP server implementation
-  - [ ] Update `src/lib.rs` to export mcp module
+- [x] Create MCP module structure (AC: 1)
+  - [x] Create `src/mcp/mod.rs` with module declarations
+  - [x] Create `src/mcp/server.rs` for MCP server implementation
+  - [x] Update `src/lib.rs` to export mcp module
 
-- [ ] Implement MCP CLI subcommand (AC: 1)
-  - [ ] Add `mcp` subcommand to `src/cli/app.rs`
-  - [ ] Add `serve` subcommand under `mcp`
-  - [ ] Create `src/cli/commands/mcp.rs` for command handler
+- [x] Implement MCP CLI subcommand (AC: 1)
+  - [x] Add `mcp` subcommand to `src/cli/app.rs`
+  - [x] Add `serve` subcommand under `mcp`
+  - [x] Create `src/cli/commands/mcp.rs` for command handler
 
-- [ ] Implement MCP server struct (AC: 1, 2, 5)
-  - [ ] Define `McpServer` struct with daemon state access
-  - [ ] Implement `ServerHandler` trait from rmcp
-  - [ ] Configure stdio transport using `rmcp::transport::io::stdio()`
+- [x] Implement MCP server struct (AC: 1, 2, 5)
+  - [x] Define `McpServer` struct with daemon state access
+  - [x] Implement `ServerHandler` trait from rmcp
+  - [x] Configure stdio transport using `rmcp::transport::io::stdio()`
 
-- [ ] Implement server lifecycle (AC: 1, 4)
-  - [ ] Implement `McpServer::run()` using rmcp's `.serve()` pattern
-  - [ ] Handle stdin EOF for graceful shutdown
-  - [ ] Integrate with daemon's CancellationToken
+- [x] Implement server lifecycle (AC: 1, 4)
+  - [x] Implement `McpServer::run()` using rmcp's `.serve()` pattern
+  - [x] Handle stdin EOF for graceful shutdown
+  - [x] Integrate with daemon's CancellationToken
 
-- [ ] Implement error handling (AC: 3)
-  - [ ] Create `McpError` enum with thiserror
-  - [ ] Handle JSON parse errors with code -32700
-  - [ ] Ensure server continues after recoverable errors
+- [x] Implement error handling (AC: 3)
+  - [x] Create `McpError` enum with thiserror
+  - [x] Handle JSON parse errors with code -32700
+  - [x] Ensure server continues after recoverable errors
 
-- [ ] Add unit tests (AC: 1, 2, 3, 4, 5)
-  - [ ] Test MCP server creation
-  - [ ] Test valid JSON-RPC request handling
-  - [ ] Test malformed JSON error response
-  - [ ] Test line-delimited message format
+- [x] Add unit tests (AC: 1, 2, 3, 4, 5)
+  - [x] Test MCP server creation
+  - [x] Test valid JSON-RPC request handling
+  - [x] Test malformed JSON error response
+  - [x] Test line-delimited message format
 
-- [ ] Add integration tests
-  - [ ] Test `palingenesis mcp serve` command starts server
-  - [ ] Test stdin/stdout communication
-  - [ ] Test graceful shutdown on EOF
+- [x] Add integration tests
+  - [x] Test `palingenesis mcp serve` command starts server
+  - [x] Test stdin/stdout communication
+  - [x] Test graceful shutdown on EOF
 
 ## Dev Notes
 
@@ -372,6 +372,52 @@ Future stories will add:
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 8.1: MCP Server stdio Transport Setup]
 - [rmcp crate documentation: https://docs.rs/rmcp/latest/rmcp/]
 
+## Dev Agent Record
+
+### Agent Model Used
+
+openai/gpt-5.2-codex
+
+### Implementation Plan
+
+- Add MCP dependencies, module structure, and CLI entrypoint for stdio serve.
+- Implement McpServer with stdio transport, parse error handling, and cancellation-aware lifecycle.
+- Add unit and integration tests for initialization, parse errors, and EOF shutdown.
+
+### Debug Log References
+
+- `cargo fmt`
+- `cargo clippy`
+- `cargo test`
+
+### Completion Notes List
+
+- Added MCP stdio server with custom line-delimited transport and JSON parse error responses.
+- Wired `palingenesis mcp serve` CLI command to daemon shutdown coordination and cancellation.
+- Added unit and integration coverage for initialize, parse error recovery, and EOF shutdown.
+
+### File List
+
+**Files to create:**
+- `src/mcp/mod.rs`
+- `src/mcp/server.rs`
+- `src/cli/commands/mcp.rs`
+- `tests/mcp_stdio.rs`
+
+**Files to modify:**
+- `Cargo.toml`
+- `Cargo.lock`
+- `src/lib.rs`
+- `src/cli/app.rs`
+- `src/cli/mod.rs`
+- `src/cli/commands/mod.rs`
+- `src/main.rs`
+- `src/daemon/core.rs`
+- `_bmad-output/implementation-artifacts/8-1-mcp-server-stdio-transport-setup.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `logs/tasks/2026-02-06.jsonl`
+
 ## Change Log
 
 - 2026-02-06: Story created and marked ready-for-dev
+- 2026-02-06: Implemented MCP stdio server, CLI integration, and tests; ran fmt/clippy/test
