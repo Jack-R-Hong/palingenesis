@@ -1,6 +1,6 @@
 # Story 9.1: OpenCode Process Detection
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
