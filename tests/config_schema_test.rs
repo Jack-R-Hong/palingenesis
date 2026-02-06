@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use palingenesis::config::schema::{
-    Config, DaemonConfig, MonitoringConfig, NotificationsConfig, OtelConfig, ResumeConfig,
+    Config, DaemonConfig, McpConfig, MonitoringConfig, NotificationsConfig, OtelConfig,
+    ResumeConfig,
 };
 
 fn expected_session_dir() -> PathBuf {
@@ -165,6 +166,15 @@ fn test_default_values_applied() {
     assert_eq!(config.resume.max_retries, 10);
     assert_eq!(config.resume.jitter, true);
     assert_eq!(config.resume.backup_count, 10);
+
+    assert_eq!(
+        config.mcp,
+        McpConfig {
+            enabled: true,
+            protocol_version: "2024-11-05".to_string(),
+            instructions: None,
+        }
+    );
 
     assert_eq!(
         config.notifications,
