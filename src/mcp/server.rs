@@ -1,22 +1,17 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use rmcp::handler::server::tool::ToolRouter;
-use rmcp::model::{
-    ErrorData, NumberOrString, ServerCapabilities, ServerInfo, ServerJsonRpcMessage,
-};
-use rmcp::service::{
-    QuitReason, RoleServer, RxJsonRpcMessage, ServerInitializeError, ServiceError, ServiceExt,
-    TxJsonRpcMessage,
-};
-use rmcp::transport::Transport;
+use rmcp::model::{ServerCapabilities, ServerInfo};
+use rmcp::service::{ServerInitializeError, ServiceError};
 use rmcp::{ServerHandler, tool_handler, tool_router};
+use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::ipc::socket::DaemonStateAccess;
+use crate::mcp::protocol::{self, JsonRpcError, JsonRpcHandler};
 
 #[derive(Clone)]
 pub struct McpServer {
@@ -31,6 +26,9 @@ pub enum McpServerError {
 
     #[error("MCP service error: {0}")]
     Service(#[from] ServiceError),
+
+    #[error("MCP IO error: {0}")]
+    Io(#[from] std::io::Error),
 
     #[error("MCP task error: {0}")]
     Task(#[from] tokio::task::JoinError),
@@ -63,26 +61,36 @@ impl McpServer {
     }
 
     pub async fn run(self, cancel: CancellationToken) -> Result<(), McpServerError> {
-        let transport = StdioTransport::new();
-        let service = self.serve_with_ct(transport, cancel.clone()).await?;
-        let service_cancel = service.cancellation_token();
-        let mut waiting = Box::pin(service.waiting());
+        let mut transport = StdioTransport::new();
+        self.run_json_rpc(&mut transport, cancel).await
+    }
 
-        let quit_reason = tokio::select! {
-            _ = cancel.cancelled() => {
-                info!("MCP server shutting down via cancellation");
-                service_cancel.cancel();
-                waiting.await?
+    pub fn process_json_rpc(&self, input: &str) -> Option<String> {
+        protocol::process_input(self, input)
+    }
+
+    async fn run_json_rpc(
+        &self,
+        transport: &mut StdioTransport,
+        cancel: CancellationToken,
+    ) -> Result<(), McpServerError> {
+        loop {
+            let line = tokio::select! {
+                _ = cancel.cancelled() => {
+                    info!("MCP server shutting down via cancellation");
+                    return Ok(());
+                }
+                line = transport.read_next_line() => line?,
+            };
+
+            let Some(line) = line else {
+                return Ok(());
+            };
+
+            if let Some(response) = self.process_json_rpc(&line) {
+                transport.write_raw(&response).await?;
             }
-            result = &mut waiting => result?,
-        };
-
-        if let QuitReason::JoinError(err) = quit_reason {
-            error!(error = %err, "MCP server task failed");
-            return Err(err.into());
         }
-
-        Ok(())
     }
 }
 
@@ -99,21 +107,11 @@ impl StdioTransport {
         Self { read, write }
     }
 
-    async fn send_parse_error(&self, error: impl Into<Cow<'static, str>>) {
-        let error = ErrorData::parse_error(error, None);
-        let message = ServerJsonRpcMessage::error(error, NumberOrString::Number(0));
-        let _ = self.write_message(message).await;
-    }
-
-    async fn write_message(
-        &self,
-        message: TxJsonRpcMessage<RoleServer>,
-    ) -> Result<(), std::io::Error> {
-        let payload = serde_json::to_vec(&message)
-            .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+    async fn write_raw(&self, payload: &str) -> Result<(), std::io::Error> {
+        let payload = payload.as_bytes();
         let mut write = self.write.lock().await;
         if let Some(ref mut write) = *write {
-            write.write_all(&payload).await?;
+            write.write_all(payload).await?;
             write.write_all(b"\n").await?;
             write.flush().await?;
             Ok(())
@@ -124,75 +122,32 @@ impl StdioTransport {
             ))
         }
     }
+
+    async fn read_next_line(&mut self) -> Result<Option<String>, std::io::Error> {
+        loop {
+            let mut line = String::new();
+            let bytes = self.read.read_line(&mut line).await?;
+            if bytes == 0 {
+                return Ok(None);
+            }
+
+            let line = line.trim_end_matches(['\n', '\r']);
+            if line.is_empty() {
+                continue;
+            }
+
+            return Ok(Some(line.to_string()));
+        }
+    }
 }
 
-impl Transport<RoleServer> for StdioTransport {
-    type Error = std::io::Error;
-
-    fn send(
-        &mut self,
-        item: TxJsonRpcMessage<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send + 'static {
-        let write = Arc::clone(&self.write);
-        async move {
-            let payload = serde_json::to_vec(&item)
-                .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
-            let mut write = write.lock().await;
-            if let Some(ref mut write) = *write {
-                write.write_all(&payload).await?;
-                write.write_all(b"\n").await?;
-                write.flush().await?;
-                Ok(())
-            } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::NotConnected,
-                    "Transport is closed",
-                ))
-            }
-        }
-    }
-
-    #[allow(clippy::manual_async_fn)]
-    fn receive(
-        &mut self,
-    ) -> impl std::future::Future<Output = Option<RxJsonRpcMessage<RoleServer>>> + Send {
-        async move {
-            loop {
-                let mut line = String::new();
-                let bytes = match self.read.read_line(&mut line).await {
-                    Ok(bytes) => bytes,
-                    Err(err) => {
-                        self.send_parse_error(err.to_string()).await;
-                        continue;
-                    }
-                };
-
-                if bytes == 0 {
-                    return None;
-                }
-
-                let line = line.trim_end_matches(['\n', '\r']);
-                if line.is_empty() {
-                    continue;
-                }
-
-                match serde_json::from_str::<RxJsonRpcMessage<RoleServer>>(line) {
-                    Ok(message) => return Some(message),
-                    Err(err) => {
-                        self.send_parse_error(err.to_string()).await;
-                        continue;
-                    }
-                }
-            }
-        }
-    }
-
-    fn close(&mut self) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
-        let write = Arc::clone(&self.write);
-        async move {
-            let mut write = write.lock().await;
-            drop(write.take());
-            Ok(())
+impl JsonRpcHandler for McpServer {
+    fn handle(&self, method: &str, params: Option<Value>) -> Result<Value, JsonRpcError> {
+        match method {
+            "initialize" => Ok(protocol::default_initialize_response()),
+            "tools/list" => Ok(json!({"tools": []})),
+            "tools/call" => Ok(json!({"content": [], "params": params})),
+            _ => Err(JsonRpcError::method_not_found()),
         }
     }
 }
