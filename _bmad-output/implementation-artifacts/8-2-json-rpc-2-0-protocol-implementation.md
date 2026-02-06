@@ -1,6 +1,6 @@
 # Story 8.2: JSON-RPC 2.0 Protocol Implementation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -389,3 +389,4 @@ openai/gpt-5.2-codex
 
 - 2026-02-06: Story created and marked ready-for-dev
 - 2026-02-06: Implemented JSON-RPC protocol handling, routing, and tests; ran fmt/clippy/test
+- 2026-02-06: Code review completed - added 6 edge case tests, removed params echo; marked done
