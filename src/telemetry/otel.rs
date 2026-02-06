@@ -77,6 +77,10 @@ pub type OtelLayer = tracing_opentelemetry::OpenTelemetryLayer<
 #[cfg(not(feature = "otel"))]
 pub type OtelLayer = ();
 
+/// Builds the OpenTelemetry tracing layer for trace export.
+///
+/// Returns `None` if OTEL is disabled, traces are disabled, or the endpoint is empty.
+/// On success, installs a batch tracer with the configured endpoint and sampling ratio.
 pub fn build_otel_layer(config: &OtelConfig) -> Option<OtelLayer> {
     if !config.enabled || !config.traces {
         return None;
@@ -202,6 +206,11 @@ fn build_log_exporter(
     }
 }
 
+/// Builds the OpenTelemetry logs layer for log export via OTLP.
+///
+/// Returns `None` if OTEL is disabled, logs are disabled, or the endpoint is empty.
+/// On success, installs a batch log exporter and bridges tracing events to OTLP logs.
+/// Logs include trace context (trace_id, span_id) when emitted within a traced span.
 pub fn build_otel_logs_layer(config: &OtelConfig) -> Option<OtelLogsLayer> {
     if !config.enabled || !config.logs {
         return None;
@@ -261,11 +270,74 @@ pub fn build_otel_logs_layer(config: &OtelConfig) -> Option<OtelLogsLayer> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::schema::OtelConfig;
 
     #[test]
     fn test_protocol_parse() {
         assert_eq!(OtelProtocol::parse("http"), Some(OtelProtocol::Http));
         assert_eq!(OtelProtocol::parse("grpc"), Some(OtelProtocol::Grpc));
         assert_eq!(OtelProtocol::parse("unknown"), None);
+    }
+
+    #[test]
+    fn test_build_otel_layer_disabled_returns_none() {
+        let config = OtelConfig {
+            enabled: false,
+            traces: true,
+            ..Default::default()
+        };
+        assert!(build_otel_layer(&config).is_none());
+    }
+
+    #[test]
+    fn test_build_otel_layer_traces_false_returns_none() {
+        let config = OtelConfig {
+            enabled: true,
+            traces: false,
+            ..Default::default()
+        };
+        assert!(build_otel_layer(&config).is_none());
+    }
+
+    #[test]
+    fn test_build_otel_layer_empty_endpoint_returns_none() {
+        let config = OtelConfig {
+            enabled: true,
+            traces: true,
+            endpoint: "  ".to_string(),
+            ..Default::default()
+        };
+        assert!(build_otel_layer(&config).is_none());
+    }
+
+    #[test]
+    fn test_build_otel_logs_layer_disabled_returns_none() {
+        let config = OtelConfig {
+            enabled: false,
+            logs: true,
+            ..Default::default()
+        };
+        assert!(build_otel_logs_layer(&config).is_none());
+    }
+
+    #[test]
+    fn test_build_otel_logs_layer_logs_false_returns_none() {
+        let config = OtelConfig {
+            enabled: true,
+            logs: false,
+            ..Default::default()
+        };
+        assert!(build_otel_logs_layer(&config).is_none());
+    }
+
+    #[test]
+    fn test_build_otel_logs_layer_empty_endpoint_returns_none() {
+        let config = OtelConfig {
+            enabled: true,
+            logs: true,
+            endpoint: "".to_string(),
+            ..Default::default()
+        };
+        assert!(build_otel_logs_layer(&config).is_none());
     }
 }
