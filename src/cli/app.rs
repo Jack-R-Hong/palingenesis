@@ -118,6 +118,8 @@ pub enum ConfigAction {
 pub enum McpCommands {
     /// Start MCP server using stdio transport
     Serve,
+    /// Output OpenCode MCP configuration snippet
+    Config,
 }
 
 #[cfg(test)]
@@ -508,6 +510,17 @@ mod tests {
                 command: McpCommands::Serve,
             }) => {}
             _ => panic!("Expected Mcp Serve command"),
+        }
+    }
+
+    #[test]
+    fn test_mcp_config_command() {
+        let cli = Cli::try_parse_from(["palingenesis", "mcp", "config"]).unwrap();
+        match cli.command {
+            Some(Commands::Mcp {
+                command: McpCommands::Config,
+            }) => {}
+            _ => panic!("Expected Mcp Config command"),
         }
     }
 }

@@ -16,6 +16,7 @@ fn test_help_shows_all_subcommands() {
         .stdout(predicate::str::contains("status"))
         .stdout(predicate::str::contains("logs"))
         .stdout(predicate::str::contains("config"))
+        .stdout(predicate::str::contains("mcp"))
         .stdout(predicate::str::contains("pause"))
         .stdout(predicate::str::contains("resume"))
         .stdout(predicate::str::contains("new-session"));

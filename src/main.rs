@@ -38,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
         },
         Some(Commands::Mcp { command }) => match command {
             McpCommands::Serve => commands::mcp::handle_serve().await,
+            McpCommands::Config => commands::mcp::handle_config().await,
         },
         Some(Commands::Pause) => commands::session::handle_pause().await,
         Some(Commands::Resume) => commands::session::handle_resume().await,
