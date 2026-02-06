@@ -83,11 +83,11 @@ From `src/telemetry/metrics.rs`:
 
 ## Definition of Done
 
-- [ ] `grafana/palingenesis-dashboard.json` created
-- [ ] Dashboard imports into Grafana without errors
-- [ ] All metrics panels configured
-- [ ] Prometheus queries are valid
-- [ ] README documents import process
+- [x] `grafana/palingenesis-dashboard.json` created
+- [x] Dashboard imports into Grafana without errors
+- [x] All metrics panels configured
+- [x] Prometheus queries are valid
+- [x] README documents import process
 
 ---
 *Generated: 2026-02-06*

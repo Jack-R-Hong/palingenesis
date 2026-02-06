@@ -114,14 +114,14 @@ development_status:
   epic-6-retrospective: done
 
   # Epic 7: Observability & Metrics (Growth)
-  epic-7: in-progress
+  epic-7: done
   7-1-prometheus-metrics-endpoint: done
   7-2-core-metrics-implementation: done
   7-3-time-saved-metric: done
   7-4-saves-count-metric: done
   7-5-otel-traces-export: done
   7-6-otel-logs-export: done
-  7-7-grafana-dashboard-template: backlog
+  7-7-grafana-dashboard-template: done
   epic-7-retrospective: optional
 
   # Epic 8: MCP Server Interface (Growth)
