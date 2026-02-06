@@ -222,7 +222,7 @@ impl ProcessMonitorState {
     }
 }
 
-struct DefaultProcessEnumerator;
+pub struct DefaultProcessEnumerator;
 
 impl ProcessEnumerator for DefaultProcessEnumerator {
     fn list_opencode_processes(&self) -> Result<Vec<ProcessInfo>, ProcessError> {
@@ -537,7 +537,7 @@ mod tests {
         while start.elapsed() < Duration::from_millis(100) {
             match timeout(Duration::from_millis(20), rx.recv()).await {
                 Ok(Some(_)) => continue,
-                Ok(None) => {
+                Ok(Option::None) => {
                     closed = true;
                     break;
                 }
