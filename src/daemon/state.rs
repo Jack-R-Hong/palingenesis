@@ -38,6 +38,21 @@ impl DaemonState {
         }
     }
 
+    pub fn new_without_auto_detection() -> Self {
+        let config = load_config_from_disk().unwrap_or_else(|err| {
+            warn!(error = %err, "Failed to load config; using defaults");
+            Config::default()
+        });
+        Self {
+            start_time: Instant::now(),
+            paused: AtomicBool::new(false),
+            sessions_count: AtomicU64::new(0),
+            resumes_count: AtomicU64::new(0),
+            config: RwLock::new(config),
+            auto_detect_active: AtomicBool::new(false),
+        }
+    }
+
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
@@ -70,6 +85,13 @@ impl DaemonState {
     pub fn otel_config(&self) -> Option<crate::config::schema::OtelConfig> {
         match self.config.read() {
             Ok(guard) => guard.otel.clone(),
+            Err(_) => None,
+        }
+    }
+
+    pub fn opencode_config(&self) -> Option<crate::config::schema::OpenCodeConfig> {
+        match self.config.read() {
+            Ok(guard) => Some(guard.opencode.clone()),
             Err(_) => None,
         }
     }
