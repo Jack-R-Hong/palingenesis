@@ -18,7 +18,7 @@ tower = "0.5.3"
 tower-http = { version = "0.6.8", features = ["trace", "timeout", "cors"] }
 
 # CLI parsing
-clap = { version = "4.5.50", features = ["derive", "env"] }
+clap = { version = "4.5.57", features = ["derive", "env"] }
 
 # Serialization & config
 serde = { version = "1.0.228", features = ["derive"] }
