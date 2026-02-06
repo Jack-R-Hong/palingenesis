@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -11,11 +10,10 @@ use tracing::{info, warn};
 
 use crate::config::schema::OpenCodeConfig;
 use crate::monitor::process::{
-    DefaultProcessEnumerator, ProcessEnumerator, ProcessError, ProcessInfo,
+    command_name_matches, DefaultProcessEnumerator, ProcessEnumerator, ProcessError, ProcessInfo,
 };
 
 const EVENT_CHANNEL_CAPACITY: usize = 32;
-const OPENCODE_PROCESS_NAME: &str = "opencode";
 const OPENCODE_SERVE_ARG: &str = "serve";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,9 +104,9 @@ impl OpenCodeMonitor {
 struct OpenCodeMonitorState {
     poll_interval: Duration,
     health_port: u16,
-    health_timeout: Duration,
     enumerator: Arc<dyn ProcessEnumerator>,
     tracked_process: Option<ProcessInfo>,
+    http_client: reqwest::Client,
 }
 
 impl OpenCodeMonitorState {
@@ -118,12 +116,16 @@ impl OpenCodeMonitorState {
         health_timeout: Duration,
         enumerator: Arc<dyn ProcessEnumerator>,
     ) -> Self {
+        let http_client = reqwest::Client::builder()
+            .timeout(health_timeout)
+            .build()
+            .unwrap_or_default();
         Self {
             poll_interval,
             health_port,
-            health_timeout,
             enumerator,
             tracked_process: None,
+            http_client,
         }
     }
 
@@ -209,7 +211,7 @@ impl OpenCodeMonitorState {
                     .await;
             }
             (Some(process), Some(_)) => {
-                if !check_health(self.health_port, self.health_timeout).await {
+                if !check_health(&self.http_client, self.health_port).await {
                     warn!(pid = process.pid, "OpenCode health check failed");
                 }
             }
@@ -272,12 +274,8 @@ struct HealthResponse {
     healthy: bool,
 }
 
-async fn check_health(health_port: u16, health_timeout: Duration) -> bool {
+async fn check_health(client: &reqwest::Client, health_port: u16) -> bool {
     let url = format!("http://localhost:{}/global/health", health_port);
-    let client = match reqwest::Client::builder().timeout(health_timeout).build() {
-        Ok(client) => client,
-        Err(_) => return false,
-    };
 
     let response = match client.get(url).send().await {
         Ok(response) => response,
@@ -309,13 +307,7 @@ fn is_opencode_serve_command(command_line: &[String]) -> bool {
     command_line.iter().any(|arg| command_name_matches(arg))
 }
 
-fn command_name_matches(value: &str) -> bool {
-    let name = Path::new(value)
-        .file_name()
-        .and_then(|os| os.to_str())
-        .unwrap_or(value);
-    name.contains(OPENCODE_PROCESS_NAME)
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -487,9 +479,49 @@ mod tests {
             let _ = server.await;
         });
 
-        let healthy = check_health(port, Duration::from_millis(200)).await;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_millis(200))
+            .build()
+            .expect("build client");
+        let healthy = check_health(&client, port).await;
 
         handle.abort();
         assert!(healthy);
+    }
+
+    #[test]
+    fn is_opencode_serve_command_matches_simple() {
+        let cmd = vec!["opencode".to_string(), "serve".to_string()];
+        assert!(is_opencode_serve_command(&cmd));
+    }
+
+    #[test]
+    fn is_opencode_serve_command_matches_full_path() {
+        let cmd = vec!["/usr/local/bin/opencode".to_string(), "serve".to_string()];
+        assert!(is_opencode_serve_command(&cmd));
+    }
+
+    #[test]
+    fn is_opencode_serve_command_case_insensitive_serve() {
+        let cmd = vec!["opencode".to_string(), "SERVE".to_string()];
+        assert!(is_opencode_serve_command(&cmd));
+    }
+
+    #[test]
+    fn is_opencode_serve_command_rejects_without_serve() {
+        let cmd = vec!["opencode".to_string(), "status".to_string()];
+        assert!(!is_opencode_serve_command(&cmd));
+    }
+
+    #[test]
+    fn is_opencode_serve_command_rejects_other_commands() {
+        let cmd = vec!["vim".to_string(), "serve".to_string()];
+        assert!(!is_opencode_serve_command(&cmd));
+    }
+
+    #[test]
+    fn is_opencode_serve_command_rejects_empty() {
+        let cmd: Vec<String> = vec![];
+        assert!(!is_opencode_serve_command(&cmd));
     }
 }

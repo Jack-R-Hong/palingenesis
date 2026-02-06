@@ -288,30 +288,34 @@ pub async fn run_mcp_server(state: Arc<DaemonState>) -> Result<(), McpServerErro
 
 impl Daemon {
     fn spawn_opencode_event_handler(
-        &self,
+        &mut self,
         mut rx: OpenCodeProcessReceiver,
         cancel: CancellationToken,
     ) {
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = cancel.cancelled() => break,
-                    event = rx.recv() => {
-                        match event {
-                            Some(OpenCodeEvent::OpenCodeStarted(process)) => {
-                                info!(pid = process.pid, "OpenCode started");
+        let opencode_span = info_span!("daemon.opencode");
+        self.shutdown.register_task(tokio::spawn(
+            async move {
+                loop {
+                    tokio::select! {
+                        _ = cancel.cancelled() => break,
+                        event = rx.recv() => {
+                            match event {
+                                Some(OpenCodeEvent::OpenCodeStarted(process)) => {
+                                    info!(pid = process.pid, "OpenCode started");
+                                }
+                                Some(OpenCodeEvent::OpenCodeStopped { process, reason }) => {
+                                    warn!(pid = process.pid, reason = ?reason, "OpenCode stopped");
+                                }
+                                Some(OpenCodeEvent::OpenCodeCrashed { process, exit_code }) => {
+                                    warn!(pid = process.pid, exit_code, "OpenCode crashed");
+                                }
+                                None => break,
                             }
-                            Some(OpenCodeEvent::OpenCodeStopped { process, reason }) => {
-                                warn!(pid = process.pid, reason = ?reason, "OpenCode stopped");
-                            }
-                            Some(OpenCodeEvent::OpenCodeCrashed { process, exit_code }) => {
-                                warn!(pid = process.pid, exit_code, "OpenCode crashed");
-                            }
-                            None => break,
                         }
                     }
                 }
             }
-        });
+            .instrument(opencode_span),
+        ));
     }
 }

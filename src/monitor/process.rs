@@ -348,7 +348,8 @@ fn is_opencode_command(args: &[String]) -> bool {
     args.iter().any(|arg| command_name_matches(arg))
 }
 
-fn command_name_matches(value: &str) -> bool {
+/// Check if a command argument contains the opencode process name.
+pub fn command_name_matches(value: &str) -> bool {
     let name = Path::new(value)
         .file_name()
         .and_then(|os| os.to_str())
