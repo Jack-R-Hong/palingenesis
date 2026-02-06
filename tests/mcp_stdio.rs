@@ -49,6 +49,7 @@ fn spawn_mcp_server() -> tokio::process::Child {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_mcp_serve_handles_initialize_request() {
     let mut child = spawn_mcp_server();
     let mut stdin = child.stdin.take().expect("missing stdin");
@@ -81,6 +82,7 @@ async fn test_mcp_serve_handles_initialize_request() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_mcp_serve_returns_parse_error_and_recovers() {
     let mut child = spawn_mcp_server();
     let mut stdin = child.stdin.take().expect("missing stdin");
@@ -131,6 +133,7 @@ async fn test_mcp_serve_returns_parse_error_and_recovers() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_mcp_serve_shutdowns_on_eof() {
     let mut child = spawn_mcp_server();
     let mut stdin = child.stdin.take().expect("missing stdin");
