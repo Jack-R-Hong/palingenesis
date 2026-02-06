@@ -1,8 +1,1 @@
-{"task":"Story 8-2 JSON-RPC 2.0 Protocol Implementation","status":"start","timestamp":"2026-02-06T09:25:22+08:00","story":"_bmad-output/implementation-artifacts/8-2-json-rpc-2-0-protocol-implementation.md"}
-{"task":"Story 8-2 JSON-RPC 2.0 Protocol Implementation","status":"end","timestamp":"2026-02-06T09:40:11+08:00","story":"_bmad-output/implementation-artifacts/8-2-json-rpc-2-0-protocol-implementation.md"}
-{"task":"Story 9-4 OpenCode Configuration Options","status":"start","timestamp":"2026-02-06T09:25:43+08:00","story":"_bmad-output/implementation-artifacts/9-4-opencode-configuration-options.md"}
-{"task":"Story 9-4 OpenCode Configuration Options","status":"end","timestamp":"2026-02-06T09:38:11+08:00","story":"_bmad-output/implementation-artifacts/9-4-opencode-configuration-options.md"}
-{"task":"bmad-bmm-dev-story","story":"9-3-opencode-http-api-client","mode":"autonomous","start_time":"2026-02-06T09:25:27+08:00","status":"started"}
-{"task":"bmad-bmm-dev-story","story":"9-3-opencode-http-api-client","mode":"autonomous","end_time":"2026-02-06T09:40:03+08:00","status":"completed"}
-{"task":"bmad-bmm-dev-story","story":"8-4-opencode-local-mcp-configuration-support","mode":"autonomous","start_time":"2026-02-06T09:25:20+08:00","status":"started"}
-{"task":"bmad-bmm-dev-story","story":"8-4-opencode-local-mcp-configuration-support","mode":"autonomous","end_time":"2026-02-06T09:40:09+08:00","status":"completed"}
+{"timestamp": "2026-02-06T10:43:28+08:00", "event": "start", "task": "Initialize sprint tracking for Epic 8", "command": "/bmad-bmm-sprint-planning", "context": {"epic": 8, "stories": ["8.1", "8.2", "8.3", "8.4"]}}
