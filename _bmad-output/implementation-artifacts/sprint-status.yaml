@@ -125,16 +125,16 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: MCP Server Interface (Growth)
-  epic-8: backlog
-  8-1-mcp-server-stdio-transport-setup: backlog
+  epic-8: in-progress
+  8-1-mcp-server-stdio-transport-setup: ready-for-dev
   8-2-json-rpc-2-0-protocol-implementation: backlog
   8-3-mcp-tool-definitions: backlog
   8-4-opencode-local-mcp-configuration-support: backlog
   epic-8-retrospective: optional
 
   # Epic 9: OpenCode Process Management (Growth)
-  epic-9: backlog
-  9-1-opencode-process-detection: backlog
+  epic-9: in-progress
+  9-1-opencode-process-detection: ready-for-dev
   9-2-automatic-opencode-restart: backlog
   9-3-opencode-http-api-client: backlog
   9-4-opencode-configuration-options: backlog
