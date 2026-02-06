@@ -6,7 +6,8 @@ pub mod validation;
 
 pub use paths::{PathError, Paths};
 pub use schema::{
-    Config, DaemonConfig, DiscordConfig, MetricsConfig, MonitoringConfig, NotificationsConfig,
-    NtfyConfig, OtelConfig, ResumeConfig, SlackConfig, WebhookConfig,
+    Config, DaemonConfig, DiscordConfig, McpConfig, MetricsConfig, MonitoringConfig,
+    NotificationsConfig, NtfyConfig, OpenCodeConfig, OtelConfig, ResumeConfig, SlackConfig,
+    WebhookConfig,
 };
 pub use validation::{ValidationError, ValidationResult, ValidationWarning, validate_config};

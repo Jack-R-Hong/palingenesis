@@ -10,7 +10,7 @@ use tracing::{info, warn};
 
 use crate::config::schema::OpenCodeConfig;
 use crate::monitor::process::{
-    command_name_matches, DefaultProcessEnumerator, ProcessEnumerator, ProcessError, ProcessInfo,
+    DefaultProcessEnumerator, ProcessEnumerator, ProcessError, ProcessInfo, command_name_matches,
 };
 
 const EVENT_CHANNEL_CAPACITY: usize = 32;
@@ -60,7 +60,8 @@ pub type OpenCodeProcessReceiver = mpsc::Receiver<OpenCodeEvent>;
 
 #[derive(Clone)]
 pub struct OpenCodeMonitor {
-    poll_interval: Duration,
+    health_check_interval: Duration,
+    health_hostname: String,
     health_port: u16,
     health_timeout: Duration,
     enumerator: Arc<dyn ProcessEnumerator>,
@@ -69,9 +70,10 @@ pub struct OpenCodeMonitor {
 impl OpenCodeMonitor {
     pub fn new(config: &OpenCodeConfig) -> Self {
         Self {
-            poll_interval: Duration::from_millis(config.poll_interval_ms),
-            health_port: config.health_port,
-            health_timeout: Duration::from_millis(config.health_timeout_ms),
+            health_check_interval: Duration::from_millis(config.health_check_interval),
+            health_hostname: config.serve_hostname.clone(),
+            health_port: config.serve_port,
+            health_timeout: Duration::from_millis(config.health_check_interval),
             enumerator: Arc::new(DefaultProcessEnumerator),
         }
     }
@@ -87,7 +89,8 @@ impl OpenCodeMonitor {
     ) -> Result<OpenCodeProcessReceiver, ProcessError> {
         let (tx, rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
         let mut state = OpenCodeMonitorState::new(
-            self.poll_interval,
+            self.health_check_interval,
+            self.health_hostname,
             self.health_port,
             self.health_timeout,
             self.enumerator,
@@ -102,7 +105,8 @@ impl OpenCodeMonitor {
 }
 
 struct OpenCodeMonitorState {
-    poll_interval: Duration,
+    health_check_interval: Duration,
+    health_hostname: String,
     health_port: u16,
     enumerator: Arc<dyn ProcessEnumerator>,
     tracked_process: Option<ProcessInfo>,
@@ -111,7 +115,8 @@ struct OpenCodeMonitorState {
 
 impl OpenCodeMonitorState {
     fn new(
-        poll_interval: Duration,
+        health_check_interval: Duration,
+        health_hostname: String,
         health_port: u16,
         health_timeout: Duration,
         enumerator: Arc<dyn ProcessEnumerator>,
@@ -121,7 +126,8 @@ impl OpenCodeMonitorState {
             .build()
             .unwrap_or_default();
         Self {
-            poll_interval,
+            health_check_interval,
+            health_hostname,
             health_port,
             enumerator,
             tracked_process: None,
@@ -134,7 +140,7 @@ impl OpenCodeMonitorState {
             warn!(error = %err, "Failed to enumerate existing OpenCode processes");
         }
 
-        let mut interval = tokio::time::interval(self.poll_interval);
+        let mut interval = tokio::time::interval(self.health_check_interval);
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
         loop {
@@ -211,7 +217,7 @@ impl OpenCodeMonitorState {
                     .await;
             }
             (Some(process), Some(_)) => {
-                if !check_health(&self.http_client, self.health_port).await {
+                if !check_health(&self.http_client, &self.health_hostname, self.health_port).await {
                     warn!(pid = process.pid, "OpenCode health check failed");
                 }
             }
@@ -274,8 +280,8 @@ struct HealthResponse {
     healthy: bool,
 }
 
-async fn check_health(client: &reqwest::Client, health_port: u16) -> bool {
-    let url = format!("http://localhost:{}/global/health", health_port);
+async fn check_health(client: &reqwest::Client, hostname: &str, health_port: u16) -> bool {
+    let url = format!("http://{}:{}/global/health", hostname, health_port);
 
     let response = match client.get(url).send().await {
         Ok(response) => response,
@@ -306,8 +312,6 @@ fn is_opencode_serve_command(command_line: &[String]) -> bool {
 
     command_line.iter().any(|arg| command_name_matches(arg))
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -368,9 +372,11 @@ mod tests {
     fn config_with_poll(poll_ms: u64) -> OpenCodeConfig {
         OpenCodeConfig {
             enabled: true,
-            health_port: 4096,
-            poll_interval_ms: poll_ms,
-            health_timeout_ms: 2000,
+            serve_port: 4096,
+            serve_hostname: "localhost".to_string(),
+            auto_restart: true,
+            restart_delay_ms: 1000,
+            health_check_interval: poll_ms,
         }
     }
 
@@ -483,7 +489,7 @@ mod tests {
             .timeout(Duration::from_millis(200))
             .build()
             .expect("build client");
-        let healthy = check_health(&client, port).await;
+        let healthy = check_health(&client, "127.0.0.1", port).await;
 
         handle.abort();
         assert!(healthy);

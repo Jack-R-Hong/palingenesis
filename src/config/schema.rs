@@ -45,6 +45,9 @@ pub struct Config {
     /// OpenCode process monitoring configuration section.
     /// Example: [opencode]
     pub opencode: OpenCodeConfig,
+    /// MCP server configuration section.
+    /// Example: [mcp]
+    pub mcp: McpConfig,
     /// Optional OpenTelemetry configuration section.
     /// Example: [otel]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,24 +148,58 @@ pub struct OpenCodeConfig {
     /// Enable OpenCode process monitoring.
     /// Example: enabled = true
     pub enabled: bool,
-    /// Port for OpenCode health checks.
-    /// Example: health_port = 4096
-    pub health_port: u16,
-    /// Polling interval for process detection (milliseconds).
-    /// Example: poll_interval_ms = 1000
-    pub poll_interval_ms: u64,
-    /// Health check timeout (milliseconds).
-    /// Example: health_timeout_ms = 2000
-    pub health_timeout_ms: u64,
+    /// Port for OpenCode serve command and health checks.
+    /// Example: serve_port = 4096
+    pub serve_port: u16,
+    /// Hostname for OpenCode serve command and health checks.
+    /// Example: serve_hostname = "localhost"
+    pub serve_hostname: String,
+    /// Automatically restart OpenCode when it crashes.
+    /// Example: auto_restart = true
+    pub auto_restart: bool,
+    /// Delay before restarting OpenCode (milliseconds).
+    /// Example: restart_delay_ms = 1000
+    pub restart_delay_ms: u64,
+    /// Interval between OpenCode health checks (milliseconds).
+    /// Example: health_check_interval = 1000
+    pub health_check_interval: u64,
 }
 
 impl Default for OpenCodeConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            health_port: 4096,
-            poll_interval_ms: 1000,
-            health_timeout_ms: 2000,
+            serve_port: 4096,
+            serve_hostname: "localhost".to_string(),
+            auto_restart: true,
+            restart_delay_ms: 1000,
+            health_check_interval: 1000,
+        }
+    }
+}
+
+/// MCP server configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct McpConfig {
+    /// Enable MCP server support.
+    /// Example: enabled = true
+    pub enabled: bool,
+    /// MCP protocol version to advertise.
+    /// Example: protocol_version = "2024-11-05"
+    pub protocol_version: String,
+    /// Optional MCP instructions for clients.
+    /// Example: instructions = "palingenesis MCP server"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instructions: Option<String>,
+}
+
+impl Default for McpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            protocol_version: "2024-11-05".to_string(),
+            instructions: None,
         }
     }
 }
@@ -453,5 +490,19 @@ mod tests {
         let config: Config = toml::from_str("[otel]\nlogs = true\n").unwrap();
         let otel = config.otel.expect("otel config");
         assert!(otel.logs);
+    }
+
+    #[test]
+    fn test_opencode_config_parsing() {
+        let config: Config = toml::from_str(
+            "[opencode]\nserve_port = 8080\nserve_hostname = \"0.0.0.0\"\n\
+auto_restart = false\nrestart_delay_ms = 5000\nhealth_check_interval = 2500\n",
+        )
+        .unwrap();
+        assert_eq!(config.opencode.serve_port, 8080);
+        assert_eq!(config.opencode.serve_hostname, "0.0.0.0");
+        assert!(!config.opencode.auto_restart);
+        assert_eq!(config.opencode.restart_delay_ms, 5000);
+        assert_eq!(config.opencode.health_check_interval, 2500);
     }
 }
