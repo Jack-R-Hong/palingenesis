@@ -1,12 +1,17 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-12-complete', 'step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
 inputDocuments: []
 workflowType: 'prd'
+workflow: 'edit'
 lastStep: 12
 workflow_completed: true
 project_name: 'palingenesis'
 user_name: 'Jack'
 date: '2026-02-05'
+lastEdited: '2026-02-06'
+editHistory:
+  - date: '2026-02-06'
+    changes: 'Added bi-directional Telegram Bot as full control channel: FR49-FR54, scope tables, Journey 4, config schema, success criteria'
 documentCounts:
   briefs: 0
   research: 0
@@ -91,7 +96,7 @@ A lightweight Rust daemon that monitors OpenCode process and sessions, automatic
 | 7 | OTEL metrics visible in Grafana/Jaeger | Dashboard shows session lifecycle |
 | 8 | External notification delivered <10s after event | Slack/Discord/webhook fires |
 | 9 | Control command executes <5s after received | `/palin pause` -> daemon pauses |
-| 10 | At least 2 control channels supported | CLI + one of (Slack/Discord/webhook) |
+| 10 | At least 2 control channels supported | CLI + one of (Slack/Discord/Telegram/webhook) |
 
 ---
 
@@ -189,6 +194,7 @@ A lightweight Rust daemon that monitors OpenCode process and sessions, automatic
 | OpenTelemetry | Metrics, traces, logs export | P1 |
 | Webhook notifications | HTTP POST on events | P1 |
 | ntfy.sh integration | Lightweight push notifications | P1 |
+| Telegram notifications | Outbound event notifications via Telegram Bot API sendMessage | P1 |
 | Config file | TOML/YAML configuration | P1 |
 | Multi-assistant support | Cursor, Copilot, etc. | P1 |
 | MCP Server interface | Daemon exposes MCP tools via stdio transport | P1 |
@@ -198,7 +204,7 @@ A lightweight Rust daemon that monitors OpenCode process and sessions, automatic
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| Slack/Discord bots | Bi-directional control via chat | P2 |
+| Slack/Discord/Telegram bots | Bi-directional control via chat | P2 |
 | gRPC API | Programmatic control interface | P2 |
 | Web dashboard | Visual monitoring UI | P2 |
 | Multi-session orchestration | Manage multiple concurrent sessions | P2 |
@@ -279,26 +285,29 @@ endpoint = "http://grafana:4317"
 
 ---
 
-### Journey 4: Remote Control (Slack/Discord Operator)
+### Journey 4: Remote Control (Slack/Discord/Telegram Operator)
 
-**Scenario**: Jack at dinner, phone buzzes with Discord alert
+**Scenario**: Jack at dinner, phone buzzes with a Telegram alert
 
 **The Interaction**:
 ```
-/palin status
+/status
 → Claude Code: waiting (retry in 23s)
 
-/palin logs --tail 5
+/logs
 → [Shows recent events]
 ```
 
-Jack lets auto-resume handle it. 30 minutes later: "Claude Code resumed."
+Jack lets auto-resume handle it. 30 minutes later, Telegram buzzes: "Claude Code resumed."
+
+Later that week, Jack switches to Discord for the same commands — same experience, different channel.
 
 **Requirements Revealed**:
-- Push notifications with action buttons
-- `/palin status` and `/palin logs` commands
-- Mobile-friendly interface
+- Push notifications via Telegram, Discord, or Slack
+- Control commands (`/status`, `/pause`, `/resume`, `/logs`, `/skip`, `/abort`, `/config`) via any supported channel
+- Mobile-friendly interface (Telegram and Discord both work natively on mobile)
 - Remote restart capability
+- Channel parity: Telegram, Discord, and Slack support the same command set
 
 ---
 
@@ -339,8 +348,8 @@ Jack lets auto-resume handle it. 30 minutes later: "Claude Code resumed."
 | State persistence | 2 |
 | Config system | 3 |
 | OTEL metrics | 3, 5 |
-| Discord/Slack notifications | 1, 4 |
-| Remote commands | 4 |
+| Discord/Slack/Telegram notifications | 1, 4 |
+| Remote commands (Discord/Slack/Telegram) | 4 |
 | Trust metrics | 5 |
 
 ---
@@ -461,6 +470,8 @@ max_retries = 3
 [notifications]
 discord_webhook = ""
 slack_webhook = ""
+telegram_bot_token = ""
+telegram_chat_id = ""
 ntfy_topic = ""
 webhook_url = ""
 
@@ -551,6 +562,15 @@ palingenesis metrics export --format prometheus >> /var/lib/prometheus/palingene
 - FR32: User can pause daemon via Discord/Slack command
 - FR33: User can resume daemon via Discord/Slack command
 - FR34: User can view logs via Discord/Slack command
+
+### Telegram Integration (Growth)
+
+- FR49: Daemon can send Telegram notifications on events (via Bot API sendMessage)
+- FR50: Daemon can receive incoming commands via Telegram Bot API
+- FR51: User can check status via Telegram command
+- FR52: User can pause/resume daemon via Telegram command
+- FR53: User can execute control commands (skip/abort/new-session/config) via Telegram
+- FR54: User can view logs via Telegram command
 
 ### Observability (Growth)
 
@@ -679,4 +699,4 @@ palingenesis metrics export --format prometheus >> /var/lib/prometheus/palingene
 
 ---
 
-**PRD Complete** | Author: Jack | Date: 2026-02-05 | Version: 1.0
+**PRD Complete** | Author: Jack | Date: 2026-02-05 | Version: 1.1 (Edited 2026-02-06: Added bi-directional Telegram Bot control channel FR49-FR54)

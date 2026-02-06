@@ -9,6 +9,10 @@ date: '2026-02-05'
 lastStep: 8
 status: 'complete'
 completedAt: '2026-02-05'
+lastEdited: '2026-02-06'
+editHistory:
+  - date: '2026-02-06'
+    changes: 'Added bi-directional Telegram Bot architecture: telegram/ module, command handler, getUpdates polling, FR49-FR54 mapping'
 documentCounts:
   prd: 1
   uxDesign: 0
@@ -53,6 +57,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 | Observability | FR35-FR40 | OTEL metrics, traces, logs, dashboards |
 | MCP Server | FR41-FR44 | MCP stdio interface, JSON-RPC 2.0, OpenCode integration |
 | OpenCode Management | FR45-FR48 | Process monitoring, auto-restart, HTTP API integration |
+| Telegram Integration | FR49-FR54 | Bi-directional Telegram Bot (notifications + command control) |
 
 **Non-Functional Requirements:**
 
@@ -104,6 +109,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 5. **Platform Abstraction:** Daemon lifecycle differs (systemd vs launchd)
 6. **Observability:** OTEL-ready instrumentation from day 1
 7. **Testing:** State machine requires property-based and integration tests
+8. **Telegram Bot:** Long-polling loop for incoming commands, shared command dispatch with IPC/HTTP
 
 ---
 
@@ -347,6 +353,47 @@ RELOAD  → OK / ERR (config reload)
 | State | `~/.local/state/palingenesis/` | `~/Library/Application Support/palingenesis/` |
 | Runtime | `/run/user/{uid}/` | `/tmp/palingenesis-{uid}/` |
 
+### Telegram Bot Architecture
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Command Ingestion** | Long-polling (`getUpdates`) | Simpler than webhook (no public URL needed), works behind NAT/firewalls, lower operational complexity for single-user daemon. |
+| **Bot Framework** | Direct Bot API via `reqwest` | No heavy framework needed. Only `getUpdates`, `sendMessage`, and `answerCallbackQuery` are used. Avoids `teloxide`/`frankenstein` dependency bloat. |
+| **Command Dispatch** | Shared `CommandHandler` trait | Telegram commands route through the same `CommandHandler` used by IPC and HTTP, ensuring consistent behavior across all control channels. |
+| **Module Location** | `src/telegram/` | Separate from `src/notify/` because Telegram is bi-directional (both inbound commands AND outbound notifications). The existing `src/notify/telegram.rs` handles outbound only; `src/telegram/` handles the bot loop and inbound command parsing. |
+| **Polling Loop** | Dedicated tokio task | Spawned as `tokio::spawn` with `CancellationToken` integration. Uses long-polling timeout of 30s to minimize API calls while staying responsive. |
+
+**Telegram Bot API Endpoints Used:**
+
+| Endpoint | Direction | Purpose |
+|----------|-----------|---------|
+| `getUpdates` | Inbound | Long-poll for incoming commands/messages |
+| `sendMessage` | Outbound | Send notifications and command responses |
+
+**Command Parsing:**
+
+Telegram commands map to the same operations as IPC/HTTP:
+
+| Telegram Command | Internal Command | Response |
+|------------------|-----------------|----------|
+| `/status` | `STATUS` | JSON-formatted status as Telegram message |
+| `/pause` | `PAUSE` | Confirmation message |
+| `/resume` | `RESUME` | Confirmation message |
+| `/skip` | `SKIP` | Confirmation message |
+| `/abort` | `ABORT` | Confirmation message |
+| `/config` | `CONFIG` | Current config summary |
+| `/new_session` | `NEW-SESSION` | Session creation confirmation |
+| `/logs` or `/logs N` | `LOGS` | Last N log lines (default 10) |
+| `/help` | — | List available commands |
+
+**Security Considerations:**
+
+| Concern | Mitigation |
+|---------|------------|
+| Unauthorized users sending commands | Validate `chat_id` matches configured value; reject messages from other chats |
+| Bot token exposure | Stored in config file with 600 permissions; never logged |
+| Rate limiting by Telegram | `getUpdates` long-polling with 30s timeout = ~2 requests/min max |
+
 ### Decision Impact Analysis
 
 **Implementation Sequence:**
@@ -498,11 +545,12 @@ info!(session_path = %path, steps_completed = steps.len(), "Session loaded");
 | Session Resumption (FR8-FR13) | `src/resume/` | `strategy.rs`, `same_session.rs`, `new_session.rs` |
 | CLI Control (FR14-FR20) | `src/cli/` | `commands.rs`, `daemon.rs` |
 | Configuration (FR21-FR25) | `src/config/` | `schema.rs`, `loader.rs` |
-| Notifications (FR26-FR30) | `src/notify/` | `webhook.rs`, `ntfy.rs`, `dispatcher.rs` |
+| Notifications (FR26-FR30) | `src/notify/` | `webhook.rs`, `ntfy.rs`, `telegram.rs`, `dispatcher.rs` |
 | External Control (FR31-FR34) | `src/http/` | `handlers.rs`, `routes.rs` |
 | Observability (FR35-FR40) | `src/telemetry/` | `metrics.rs`, `traces.rs` |
 | MCP Server (FR41-FR44) | `src/mcp/` | `server.rs`, `tools.rs`, `handlers.rs` |
 | OpenCode Management (FR45-FR48) | `src/opencode/` | `process.rs`, `client.rs`, `session.rs` |
+| Telegram Integration (FR49-FR54) | `src/telegram/` | `bot.rs`, `commands.rs`, `polling.rs` |
 
 ### Complete Project Directory Structure
 
@@ -605,7 +653,14 @@ palingenesis/
 │   │   ├── dispatcher.rs             # Event → channel routing
 │   │   ├── webhook.rs                # HTTP POST notifications
 │   │   ├── ntfy.rs                   # ntfy.sh integration
+│   │   ├── telegram.rs               # Telegram outbound notifications
 │   │   └── channel.rs                # NotificationChannel trait
+│   │
+│   ├── telegram/
+│   │   ├── mod.rs                    # Telegram bot module root
+│   │   ├── bot.rs                    # Bot lifecycle management
+│   │   ├── polling.rs                # getUpdates long-polling loop
+│   │   └── commands.rs               # Command parsing & dispatch
 │   │
 │   ├── config/
 │   │   ├── mod.rs                    # Config module root
@@ -647,6 +702,7 @@ graph TB
         IPC[ipc/socket.rs]
         HTTP[http/server.rs]
         MCP[mcp/server.rs]
+        TGBot[telegram/bot.rs]
     end
     
     subgraph "Core Daemon"
@@ -677,6 +733,7 @@ graph TB
     HTTP --> Daemon
     MCP --> Daemon
     OpenCodeAgent --> MCP
+    TGBot --> Daemon
     Daemon --> Monitor
     Daemon --> State
     Daemon --> OCProcess
@@ -688,6 +745,7 @@ graph TB
     Resume --> State
     Resume --> Notify
     Daemon --> Telemetry
+    Notify --> TGBot
 ```
 
 ### Integration Points
@@ -699,6 +757,7 @@ graph TB
 | CLI → Daemon | Unix socket (`ipc/`) | Request/response protocol |
 | HTTP → Daemon | Axum handlers | Shared `AppState` |
 | MCP → Daemon | stdio (`mcp/`) | JSON-RPC 2.0 protocol |
+| Telegram → Daemon | `tokio::sync::mpsc` | `TelegramCommand` channel |
 | Monitor → Daemon | `tokio::sync::mpsc` | `MonitorEvent` channel |
 | Daemon → Notify | `tokio::sync::mpsc` | `NotificationEvent` channel |
 
@@ -712,6 +771,8 @@ graph TB
 | OpenCode process | `opencode/process.rs` | Process spawn (`opencode serve`) |
 | Webhook endpoints | `notify/webhook.rs` | HTTP POST |
 | ntfy.sh | `notify/ntfy.rs` | HTTP POST |
+| Telegram Bot API (outbound) | `notify/telegram.rs` | HTTP POST (`sendMessage`) |
+| Telegram Bot API (inbound) | `telegram/polling.rs` | HTTP GET (`getUpdates` long-poll) |
 | Prometheus | `http/handlers/metrics.rs` | HTTP GET (scrape) |
 | OTLP collector | `telemetry/otel.rs` | gRPC/HTTP (optional) |
 
@@ -727,6 +788,7 @@ sequenceDiagram
     participant R as Resume
     participant S as State
     participant N as Notify
+    participant TG as Telegram Bot
     
     FS->>M: File change event
     M->>C: Parse session
@@ -739,7 +801,13 @@ sequenceDiagram
     R->>OC: Resume session via HTTP API
     R->>S: Update state
     R->>N: Send notification
-    N-->>External: Webhook/ntfy
+    N-->>External: Webhook/ntfy/Telegram
+    
+    Note over TG,D: Telegram Control Flow
+    TG->>TG: getUpdates (long-poll)
+    TG->>D: /pause command
+    D->>S: Update state
+    D->>TG: sendMessage (confirmation)
 ```
 
 ---
@@ -762,7 +830,7 @@ sequenceDiagram
 - Async patterns: CancellationToken + channels defined
 
 **Structure Alignment:**
-- Modules match all 7 FR categories
+- Modules match all 8 FR categories (including Telegram FR41-FR46)
 - Test structure follows inline unit / integration in `tests/`
 - Config paths platform-specific via `dirs` crate
 
@@ -779,6 +847,7 @@ sequenceDiagram
 | FR35-FR40 (Observability) | `telemetry/` | ✅ |
 | FR41-FR44 (MCP Server) | `mcp/` | ✅ |
 | FR45-FR48 (OpenCode Management) | `opencode/` | ✅ |
+| FR49-FR54 (Telegram Integration) | `telegram/`, `notify/telegram.rs` | ✅ |
 
 **NFR Coverage:**
 - <5s detection: inotify/FSEvents ✅
@@ -807,6 +876,7 @@ sequenceDiagram
 - Multi-assistant monitoring
 - Web dashboard
 - OTEL trace propagation details
+- Telegram webhook mode (alternative to long-polling for advanced deployments)
 
 ### Architecture Completeness Checklist
 
@@ -815,12 +885,12 @@ sequenceDiagram
 - [x] Technical constraints identified
 - [x] Cross-cutting concerns mapped (7)
 - [x] Critical decisions with versions
-- [x] Technology stack specified (9 crates)
+- [x] Technology stack specified (9 crates + Telegram Bot API via reqwest)
 - [x] Integration patterns defined
 - [x] Naming conventions established
 - [x] Structure patterns defined
 - [x] Communication patterns specified
-- [x] Complete directory structure (60+ files)
+- [x] Complete directory structure (65+ files including telegram/)
 - [x] Component boundaries established
 - [x] Integration points mapped
 - [x] Requirements mapping complete

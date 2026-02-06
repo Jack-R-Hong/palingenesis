@@ -87,6 +87,14 @@ This document provides the complete epic and story breakdown for palingenesis, d
 - FR47: Daemon manages sessions via OpenCode HTTP API (`/session/*` endpoints)
 - FR48: User can configure OpenCode serve port/hostname via config file
 
+**Telegram Integration - Growth (FR49-FR54)**
+- FR49: Daemon can send Telegram notifications on events (via Bot API sendMessage)
+- FR50: Daemon can receive incoming commands via Telegram Bot API
+- FR51: User can check status via Telegram command
+- FR52: User can pause/resume daemon via Telegram command
+- FR53: User can execute control commands (skip/abort/new-session/config) via Telegram
+- FR54: User can view logs via Telegram command
+
 ### Non-Functional Requirements
 
 **Performance**
@@ -211,6 +219,12 @@ This document provides the complete epic and story breakdown for palingenesis, d
 | FR46 | Epic 9 | Auto-restart OpenCode via serve |
 | FR47 | Epic 9 | Manage sessions via HTTP API |
 | FR48 | Epic 9 | Configure OpenCode serve port/hostname |
+| FR49 | Epic 10 | Telegram outbound notifications |
+| FR50 | Epic 10 | Telegram incoming command reception |
+| FR51 | Epic 10 | Status via Telegram command |
+| FR52 | Epic 10 | Pause/resume via Telegram command |
+| FR53 | Epic 10 | Control commands via Telegram |
+| FR54 | Epic 10 | Logs via Telegram command |
 
 ## Epic List
 
@@ -252,16 +266,9 @@ User can view metrics in Prometheus/Grafana, see traces in Jaeger, and track "ti
 **FRs covered:** FR35, FR36, FR37, FR38, FR39, FR40
 **Priority:** Growth
 
-### Epic 8: MCP Server Interface
-OpenCode AI Agent can control palingenesis daemon via MCP protocol, enabling AI-driven workflow orchestration.
-**FRs covered:** FR41, FR42, FR43, FR44
-**ARCHs covered:** `src/mcp/` module (server.rs, tools.rs, handlers.rs)
-**Priority:** Growth
-
-### Epic 9: OpenCode Process Management
-Daemon monitors OpenCode process, automatically restarts it when crashed, and manages sessions via HTTP API for seamless recovery.
-**FRs covered:** FR45, FR46, FR47, FR48
-**ARCHs covered:** `src/opencode/` module (process.rs, client.rs, session.rs)
+### Epic 10: Bi-Directional Telegram Bot
+User can receive notifications AND send control commands to palingenesis via Telegram Bot, providing full mobile control without SSH access.
+**FRs covered:** FR49, FR50, FR51, FR52, FR53, FR54
 **Priority:** Growth
 
 ---
@@ -2373,6 +2380,263 @@ So that palingenesis works with my OpenCode setup.
 
 ---
 
+## Epic 10: Bi-Directional Telegram Bot
+
+User can receive notifications AND send control commands to palingenesis via Telegram Bot, providing full mobile control without SSH access.
+
+### Story 10.1: Telegram Bot Module Setup
+
+As a daemon,
+I want a dedicated Telegram bot module,
+So that I can handle both inbound commands and outbound notifications via Telegram.
+
+**Acceptance Criteria:**
+
+**Given** the daemon starts with Telegram configured (bot_token + chat_id)
+**When** initialization completes
+**Then** the Telegram bot polling loop starts as a dedicated tokio task
+**And** logs "Telegram bot started, polling for commands"
+
+**Given** Telegram is not configured (no bot_token)
+**When** the daemon starts
+**Then** the Telegram bot module is not initialized
+**And** no Telegram-related tasks are spawned
+
+**Given** the Telegram bot is running
+**When** the daemon shuts down
+**Then** the polling loop is cancelled via CancellationToken
+**And** cleanup completes gracefully
+
+**Technical Notes:**
+- Implements: FR50
+- Create `src/telegram/mod.rs`, `src/telegram/bot.rs`
+- Uses CancellationToken from daemon shutdown system
+- No external bot framework needed — direct Bot API via reqwest
+
+---
+
+### Story 10.2: Telegram getUpdates Long-Polling
+
+As a Telegram bot,
+I want to poll for incoming messages via getUpdates,
+So that I can receive user commands without a public webhook endpoint.
+
+**Acceptance Criteria:**
+
+**Given** the bot is initialized
+**When** it starts polling
+**Then** it calls `getUpdates` with `timeout=30` (long-poll)
+**And** tracks `offset` to avoid processing duplicate updates
+
+**Given** no new messages
+**When** the long-poll times out (30s)
+**Then** it immediately starts a new poll
+**And** CPU usage remains <1%
+
+**Given** new messages arrive
+**When** `getUpdates` returns updates
+**Then** each update is processed sequentially
+**And** `offset` is updated to `last_update_id + 1`
+
+**Given** the Telegram API returns an error
+**When** the error is transient (network, 500)
+**Then** it retries with exponential backoff (5s, 10s, 20s, max 60s)
+**And** logs the error at warn level
+
+**Given** the bot token is invalid
+**When** Telegram returns 401 Unauthorized
+**Then** it logs error "Invalid Telegram bot token"
+**And** stops polling (does not retry — permanent error)
+
+**Technical Notes:**
+- Implements: FR50
+- Create `src/telegram/polling.rs`
+- Long-poll timeout of 30s = ~2 API calls/minute during idle
+- Use reqwest client shared with notification sender
+
+---
+
+### Story 10.3: Telegram Command Parser
+
+As a Telegram bot,
+I want to parse incoming messages as daemon commands,
+So that users can control palingenesis from Telegram.
+
+**Acceptance Criteria:**
+
+**Given** a message `/status` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Status`
+
+**Given** a message `/pause` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Pause`
+
+**Given** a message `/resume` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Resume`
+
+**Given** a message `/skip` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Skip`
+
+**Given** a message `/abort` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Abort`
+
+**Given** a message `/config` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Config`
+
+**Given** a message `/new_session` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::NewSession`
+
+**Given** a message `/logs` or `/logs 20` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Logs { tail: N }` (default 10)
+
+**Given** a message `/help` from the configured chat_id
+**When** the parser processes it
+**Then** it returns `Command::Help`
+
+**Given** a message from a DIFFERENT chat_id
+**When** the parser processes it
+**Then** it rejects the message silently (security: only configured chat_id)
+**And** logs warn "Rejected command from unauthorized chat: {chat_id}"
+
+**Given** an unrecognized command
+**When** the parser processes it
+**Then** it returns `Command::Unknown` with the original text
+**And** bot responds with "Unknown command. Type /help for available commands."
+
+**Technical Notes:**
+- Implements: FR51, FR52, FR53, FR54
+- Create `src/telegram/commands.rs`
+- Commands route through the same `CommandHandler` trait used by IPC and HTTP
+- Security: validate chat_id matches config before processing
+
+---
+
+### Story 10.4: Telegram Command Dispatch & Response
+
+As a Telegram bot,
+I want to execute parsed commands and send responses back,
+So that users get feedback on their control actions.
+
+**Acceptance Criteria:**
+
+**Given** a valid `/status` command
+**When** dispatched to the daemon
+**Then** bot responds with formatted status message:
+```
+ℹ️ Daemon Status
+State: monitoring
+Uptime: 2h 30m
+Session: /path/to/session.md
+Steps: 5/12
+Saves: 42
+```
+
+**Given** a valid `/pause` command
+**When** dispatched to the daemon
+**Then** daemon transitions to paused state
+**And** bot responds "⏸ Monitoring paused"
+
+**Given** a valid `/resume` command
+**When** dispatched to the daemon
+**Then** daemon transitions to monitoring state
+**And** bot responds "▶️ Monitoring resumed"
+
+**Given** a valid `/logs 5` command
+**When** dispatched to the daemon
+**Then** bot responds with last 5 log lines
+**And** message uses monospace formatting for readability
+
+**Given** a `/help` command
+**When** processed
+**Then** bot responds with list of available commands and descriptions
+
+**Given** any command fails
+**When** error occurs
+**Then** bot responds with "❌ Error: {reason}"
+
+**Given** response text exceeds Telegram's 4096 char limit
+**When** sending response
+**Then** it truncates with "... (truncated, showing last N lines)"
+
+**Technical Notes:**
+- Implements: FR51, FR52, FR53, FR54
+- Use the shared CommandHandler trait for dispatch
+- Responses sent via `sendMessage` with HTML parse_mode
+- Reuses existing `notify/telegram.rs` client for sending
+
+---
+
+### Story 10.5: Telegram Outbound Notifications
+
+As a user,
+I want to receive daemon event notifications in Telegram,
+So that I'm alerted about session stops, resumes, and errors on my phone.
+
+**Acceptance Criteria:**
+
+**Given** Telegram is configured with bot_token and chat_id
+**When** a notification event occurs (SessionStopped, ResumeSucceeded, etc.)
+**Then** a formatted message is sent to the configured Telegram chat
+
+**Given** a SessionStopped event
+**When** notification is sent
+**Then** message includes emoji, event title, timestamp, session path, stop reason
+
+**Given** a ResumeSucceeded event
+**When** notification is sent
+**Then** message includes strategy used and wait time
+
+**Given** the Telegram API is unavailable
+**When** notification fails
+**Then** it is retried up to 3 times with backoff
+**And** failure is logged but doesn't crash the daemon
+
+**Technical Notes:**
+- Implements: FR49
+- Already partially implemented in `src/notify/telegram.rs`
+- Ensure existing TelegramChannel is registered in the notification dispatcher
+- Verify it follows the same NotificationChannel trait pattern as Discord/Slack/webhook
+
+---
+
+### Story 10.6: Telegram Integration Tests
+
+As a developer,
+I want integration tests for the Telegram bot module,
+So that I can verify command parsing, dispatch, and error handling.
+
+**Acceptance Criteria:**
+
+**Given** test fixtures with sample Telegram updates (JSON)
+**When** the command parser processes them
+**Then** all commands are correctly parsed
+
+**Given** an unauthorized chat_id in test
+**When** the security check runs
+**Then** the message is rejected
+
+**Given** mock Telegram API responses
+**When** polling loop processes them
+**Then** offset tracking works correctly across batches
+
+**Given** a long-poll timeout scenario
+**When** the polling loop handles it
+**Then** it re-polls without error
+
+**Technical Notes:**
+- Create `tests/integration/telegram_test.rs`
+- Use wiremock or similar for mocking Telegram Bot API
+- Test both happy paths and error paths (invalid token, network errors)
+
+---
+
 ## Summary
 
 | Epic | Stories | FRs Covered | Priority |
@@ -2386,6 +2650,7 @@ So that palingenesis works with my OpenCode setup.
 | Epic 7: Observability & Metrics | 7 | FR35-40 | Growth |
 | Epic 8: MCP Server Interface | 4 | FR41-44 | Growth |
 | Epic 9: OpenCode Process Management | 4 | FR45-48 | Growth |
-| **Total** | **63 stories** | **48 FRs** | ✅ Complete |
+| Epic 10: Bi-Directional Telegram Bot | 6 | FR49-54 | Growth |
+| **Total** | **69 stories** | **54 FRs** | ✅ Complete |
 
 All functional requirements are covered. Stories are sized for single dev agent completion with clear acceptance criteria in Given/When/Then format.
