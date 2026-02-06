@@ -193,6 +193,17 @@ debounce_ms = 100
 # Optional: Polling interval fallback (seconds)
 # poll_interval_secs = 5
 
+# OpenCode process monitoring configuration
+[opencode]
+# Enable OpenCode process monitoring
+enabled = false
+# OpenCode health check port
+health_port = 4096
+# Process poll interval (milliseconds)
+poll_interval_ms = 1000
+# Health check timeout (milliseconds)
+health_timeout_ms = 2000
+
 # Resume strategy configuration
 [resume]
 # Enable automatic session resume
@@ -385,12 +396,13 @@ fn format_section(config: &Config, section: &str, json: bool) -> anyhow::Result<
         "monitoring" => format_value(&config.monitoring, json),
         "resume" => format_value(&config.resume, json),
         "notifications" => format_value(&config.notifications, json),
+        "opencode" => format_value(&config.opencode, json),
         "otel" => {
             let otel = config.otel.clone().unwrap_or_default();
             format_value(&otel, json)
         }
         _ => anyhow::bail!(
-            "Unknown section: {section}. Valid sections: daemon, monitoring, resume, notifications, otel"
+            "Unknown section: {section}. Valid sections: daemon, monitoring, resume, notifications, opencode, otel"
         ),
     }
 }
@@ -465,6 +477,27 @@ fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, Strin
     apply_option_parse_env(
         "PALINGENESIS_POLL_INTERVAL_SECS",
         &mut config.monitoring.poll_interval_secs,
+        &mut overrides,
+    )?;
+
+    apply_bool_env(
+        "PALINGENESIS_OPENCODE_ENABLED",
+        &mut config.opencode.enabled,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_OPENCODE_HEALTH_PORT",
+        &mut config.opencode.health_port,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_OPENCODE_POLL_INTERVAL_MS",
+        &mut config.opencode.poll_interval_ms,
+        &mut overrides,
+    )?;
+    apply_parse_env(
+        "PALINGENESIS_OPENCODE_HEALTH_TIMEOUT_MS",
+        &mut config.opencode.health_timeout_ms,
         &mut overrides,
     )?;
 

@@ -42,6 +42,9 @@ pub struct Config {
     /// Metrics configuration section.
     /// Example: [metrics]
     pub metrics: MetricsConfig,
+    /// OpenCode process monitoring configuration section.
+    /// Example: [opencode]
+    pub opencode: OpenCodeConfig,
     /// Optional OpenTelemetry configuration section.
     /// Example: [otel]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -133,6 +136,35 @@ pub struct MonitoringConfig {
     /// Example: poll_interval_secs = 5
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poll_interval_secs: Option<u64>,
+}
+
+/// OpenCode process monitoring configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct OpenCodeConfig {
+    /// Enable OpenCode process monitoring.
+    /// Example: enabled = true
+    pub enabled: bool,
+    /// Port for OpenCode health checks.
+    /// Example: health_port = 4096
+    pub health_port: u16,
+    /// Polling interval for process detection (milliseconds).
+    /// Example: poll_interval_ms = 1000
+    pub poll_interval_ms: u64,
+    /// Health check timeout (milliseconds).
+    /// Example: health_timeout_ms = 2000
+    pub health_timeout_ms: u64,
+}
+
+impl Default for OpenCodeConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            health_port: 4096,
+            poll_interval_ms: 1000,
+            health_timeout_ms: 2000,
+        }
+    }
 }
 
 impl Default for MonitoringConfig {

@@ -103,6 +103,30 @@ pub fn validate_config(config: &Config) -> ValidationResult {
         }
     }
 
+    if config.opencode.poll_interval_ms == 0 {
+        errors.push(ValidationError {
+            field: "opencode.poll_interval_ms".to_string(),
+            message: "OpenCode poll interval must be positive".to_string(),
+            suggestion: Some("Use a value of at least 1 ms".to_string()),
+        });
+    }
+
+    if config.opencode.health_timeout_ms == 0 {
+        errors.push(ValidationError {
+            field: "opencode.health_timeout_ms".to_string(),
+            message: "OpenCode health timeout must be positive".to_string(),
+            suggestion: Some("Use a value of at least 1 ms".to_string()),
+        });
+    }
+
+    if config.opencode.health_port == 0 {
+        errors.push(ValidationError {
+            field: "opencode.health_port".to_string(),
+            message: "OpenCode health port must be between 1 and 65535".to_string(),
+            suggestion: Some("Use a port between 1 and 65535".to_string()),
+        });
+    }
+
     if config.resume.base_delay_secs == 0 {
         errors.push(ValidationError {
             field: "resume.base_delay_secs".to_string(),
@@ -328,7 +352,7 @@ fn validate_dir_path(
             message: format!("Parent directory does not exist: {}", parent.display()),
             suggestion: Some("Create the parent directory or update the path".to_string()),
         }),
-        None => errors.push(ValidationError {
+        Option::None => errors.push(ValidationError {
             field: field.to_string(),
             message: "Invalid directory path".to_string(),
             suggestion: Some("Update the path to a valid directory".to_string()),
@@ -367,7 +391,7 @@ fn validate_file_parent_path(
                 parent.display()
             ),
         }),
-        None => errors.push(ValidationError {
+        Option::None => errors.push(ValidationError {
             field: field.to_string(),
             message: "Invalid file path".to_string(),
             suggestion: Some("Update the path to a valid file location".to_string()),
