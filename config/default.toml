@@ -33,3 +33,17 @@ backoff_max = 300
 level = "info"
 # Log format: json, pretty
 format = "pretty"
+
+[opencode]
+# Enable OpenCode process monitoring
+enabled = false
+# OpenCode serve port
+serve_port = 4096
+# OpenCode serve hostname
+serve_hostname = "localhost"
+# Automatically restart OpenCode on crash
+auto_restart = true
+# Delay before restart (milliseconds)
+restart_delay_ms = 1000
+# Health check interval (milliseconds)
+health_check_interval = 1000

@@ -197,12 +197,25 @@ debounce_ms = 100
 [opencode]
 # Enable OpenCode process monitoring
 enabled = false
-# OpenCode health check port
-health_port = 4096
-# Process poll interval (milliseconds)
-poll_interval_ms = 1000
-# Health check timeout (milliseconds)
-health_timeout_ms = 2000
+# OpenCode serve port
+serve_port = 4096
+# OpenCode serve hostname
+serve_hostname = "localhost"
+# Automatically restart OpenCode on crash
+auto_restart = true
+# Delay before restart (milliseconds)
+restart_delay_ms = 1000
+# Health check interval (milliseconds)
+health_check_interval = 1000
+
+# MCP server configuration
+[mcp]
+# Enable MCP server support
+enabled = true
+# MCP protocol version to advertise
+protocol_version = "2024-11-05"
+# Optional MCP instructions for clients
+# instructions = "palingenesis MCP server"
 
 # Resume strategy configuration
 [resume]
@@ -397,12 +410,13 @@ fn format_section(config: &Config, section: &str, json: bool) -> anyhow::Result<
         "resume" => format_value(&config.resume, json),
         "notifications" => format_value(&config.notifications, json),
         "opencode" => format_value(&config.opencode, json),
+        "mcp" => format_value(&config.mcp, json),
         "otel" => {
             let otel = config.otel.clone().unwrap_or_default();
             format_value(&otel, json)
         }
         _ => anyhow::bail!(
-            "Unknown section: {section}. Valid sections: daemon, monitoring, resume, notifications, opencode, otel"
+            "Unknown section: {section}. Valid sections: daemon, monitoring, resume, notifications, opencode, mcp, otel"
         ),
     }
 }
@@ -486,18 +500,28 @@ fn apply_env_overrides(config: &mut Config) -> anyhow::Result<Vec<(String, Strin
         &mut overrides,
     )?;
     apply_parse_env(
-        "PALINGENESIS_OPENCODE_HEALTH_PORT",
-        &mut config.opencode.health_port,
+        "PALINGENESIS_OPENCODE_SERVE_PORT",
+        &mut config.opencode.serve_port,
+        &mut overrides,
+    )?;
+    apply_string_env(
+        "PALINGENESIS_OPENCODE_SERVE_HOSTNAME",
+        &mut config.opencode.serve_hostname,
+        &mut overrides,
+    );
+    apply_bool_env(
+        "PALINGENESIS_OPENCODE_AUTO_RESTART",
+        &mut config.opencode.auto_restart,
         &mut overrides,
     )?;
     apply_parse_env(
-        "PALINGENESIS_OPENCODE_POLL_INTERVAL_MS",
-        &mut config.opencode.poll_interval_ms,
+        "PALINGENESIS_OPENCODE_RESTART_DELAY_MS",
+        &mut config.opencode.restart_delay_ms,
         &mut overrides,
     )?;
     apply_parse_env(
-        "PALINGENESIS_OPENCODE_HEALTH_TIMEOUT_MS",
-        &mut config.opencode.health_timeout_ms,
+        "PALINGENESIS_OPENCODE_HEALTH_CHECK_INTERVAL",
+        &mut config.opencode.health_check_interval,
         &mut overrides,
     )?;
 
