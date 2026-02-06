@@ -120,7 +120,7 @@ development_status:
   7-3-time-saved-metric: done
   7-4-saves-count-metric: done
   7-5-otel-traces-export: done
-  7-6-otel-logs-export: review
+  7-6-otel-logs-export: done
   7-7-grafana-dashboard-template: backlog
   epic-7-retrospective: optional
 
