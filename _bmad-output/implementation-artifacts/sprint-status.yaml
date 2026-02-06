@@ -139,3 +139,13 @@ development_status:
   9-3-opencode-http-api-client: review
   9-4-opencode-configuration-options: review
   epic-9-retrospective: optional
+
+  # Epic 10: Bi-Directional Telegram Bot (Growth)
+  epic-10: backlog
+  10-1-telegram-bot-module-setup: ready-for-dev
+  10-2-telegram-getupdates-long-polling: backlog
+  10-3-telegram-command-parser: backlog
+  10-4-telegram-command-dispatch-and-response: backlog
+  10-5-telegram-outbound-notifications: backlog
+  10-6-telegram-integration-tests: backlog
+  epic-10-retrospective: optional
