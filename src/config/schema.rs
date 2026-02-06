@@ -415,4 +415,11 @@ mod tests {
         let otel = config.otel.expect("otel config");
         assert_eq!(otel.sampling_ratio, 0.4);
     }
+
+    #[test]
+    fn test_otel_logs_enabled_parsing() {
+        let config: Config = toml::from_str("[otel]\nlogs = true\n").unwrap();
+        let otel = config.otel.expect("otel config");
+        assert!(otel.logs);
+    }
 }
