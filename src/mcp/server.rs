@@ -239,6 +239,6 @@ mod tests {
         let server = McpServer::new(Arc::new(MockState));
         let _ = server.state();
         let info = server.get_info();
-        assert_eq!(info.capabilities.tools.is_some(), true);
+        assert!(info.capabilities.tools.is_some());
     }
 }

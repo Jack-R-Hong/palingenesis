@@ -1,6 +1,6 @@
 # Story 8.1: MCP Server stdio Transport Setup
 
-Status: review
+Status: done
 
 ## Story
 

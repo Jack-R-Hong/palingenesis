@@ -15,3 +15,7 @@
 {"task":"bmad-bmm-dev-story","story":"8-1-mcp-server-stdio-transport-setup","mode":"autonomous","end_time":"2026-02-06T09:05:59+08:00","status":"completed"}
 {"task_id":"dev-story-9-1","command":"bmad-bmm-dev-story","story":"9-1-opencode-process-detection","mode":"autonomous","start_time":"2026-02-06T09:00:00+08:00","status":"started"}
 {"task_id":"dev-story-9-1","command":"bmad-bmm-dev-story","story":"9-1-opencode-process-detection","mode":"autonomous","end_time":"2026-02-06T09:30:00+08:00","status":"failed","reason":"cargo test failing: mcp_stdio timeouts"}
+{"task":"code-review-8-1","story":"8-1-mcp-server-stdio-transport-setup","action":"start","timestamp":"2026-02-06T10:00:00+08:00","agent":"sisyphus-junior"}
+{"task":"code-review-9-1","story":"9-1-opencode-process-detection","started_at":"2026-02-06T09:17:34+08:00","model":"claude-opus-4-5","agent":"sisyphus-junior"}
+{"task":"create-epic-8-stories","stories":["8-2","8-3","8-4"],"status":"started","timestamp":"2026-02-06T10:00:00+08:00","agent":"sisyphus-junior","context":"FR41-FR44,rmcp 0.8.0"}
+{"task":"create-epic-9-stories","stories":["9-2-automatic-opencode-restart","9-3-opencode-http-api-client","9-4-opencode-configuration-options"],"start_time":"2026-02-06T10:30:00+08:00","status":"started"}
