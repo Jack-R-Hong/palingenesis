@@ -10,3 +10,8 @@
 {"task_id":"create-story-9-1","command":"bmad-bmm-create-story","start_time":"2026-02-06T08:28:53+08:00","epic":"Epic 9: OpenCode Process Management","story":"9-1-opencode-process-detection","status":"started"}
 {"task":"create-story-8-1-mcp-server-stdio-transport-setup","status":"started","timestamp":"2026-02-06T08:29:00+08:00","epic":"8","story":"8-1"}
 {"task":"create-story-8-1-mcp-server-stdio-transport-setup","status":"completed","timestamp":"2026-02-06T08:30:12+08:00","epic":"8","story":"8-1","outputs":["_bmad-output/implementation-artifacts/8-1-mcp-server-stdio-transport-setup.md"]}
+{"task_id":"create-story-9-1","command":"bmad-bmm-create-story","end_time":"2026-02-06T08:31:20+08:00","epic":"Epic 9: OpenCode Process Management","story":"9-1-opencode-process-detection","status":"completed","commit":"b0520de"}
+{"task":"bmad-bmm-dev-story","story":"8-1-mcp-server-stdio-transport-setup","mode":"autonomous","start_time":"2026-02-06T08:32:41+08:00","status":"started"}
+{"task":"bmad-bmm-dev-story","story":"8-1-mcp-server-stdio-transport-setup","mode":"autonomous","end_time":"2026-02-06T09:05:59+08:00","status":"completed"}
+{"task_id":"dev-story-9-1","command":"bmad-bmm-dev-story","story":"9-1-opencode-process-detection","mode":"autonomous","start_time":"2026-02-06T09:00:00+08:00","status":"started"}
+{"task_id":"dev-story-9-1","command":"bmad-bmm-dev-story","story":"9-1-opencode-process-detection","mode":"autonomous","end_time":"2026-02-06T09:30:00+08:00","status":"failed","reason":"cargo test failing: mcp_stdio timeouts"}
